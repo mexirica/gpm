@@ -12,7 +12,7 @@ import (
 
 func ListInstalled() ([]model.Package, error) {
 	cmd := exec.Command("dpkg-query", "-W",
-		"-f=${Package}\t${Version}\t${Description}\n")
+		"-f=${Package}\t${Version}\t${Installed-Size}\t${Description}\n")
 	var out bytes.Buffer
 	var stderr bytes.Buffer
 	cmd.Stdout = &out

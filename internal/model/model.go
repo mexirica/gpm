@@ -3,6 +3,7 @@ package model
 type Package struct {
 	Name        string
 	Version     string
+	Size        string
 	Description string
 	Installed   bool
 	Upgradable  bool
