@@ -77,8 +77,6 @@ type App struct {
 	fetchTotal    int                     // total mirrors to test
 	fetchResultCh <-chan fetch.TestResult // channel for incremental results
 
-	// Parallel download toggle
-	parallelDL bool
 
 	// Lazy info loading (version + size)
 	infoCache map[string]apt.PackageInfo // cached info by package name
@@ -122,7 +120,6 @@ func New() App {
 		status:        "Loading packages...",
 		loading:       true,
 		historyStore:  history.Load(),
-		parallelDL:    true,
 	}
 }
 
@@ -154,11 +151,8 @@ func showDetailCmd(name string) tea.Cmd {
 	}
 }
 
-func installCmd(name string, parallel bool) tea.Cmd {
-	cmd := apt.InstallCmd(name)
-	if parallel {
-		cmd = apt.ParallelInstallCmd(name)
-	}
+func installCmd(name string) tea.Cmd {
+	cmd := apt.ParallelInstallCmd(name)
 	return tea.ExecProcess(cmd, func(err error) tea.Msg {
 		return execFinishedMsg{op: "install", name: name, err: err}
 	})
@@ -170,21 +164,15 @@ func removeCmd(name string) tea.Cmd {
 	})
 }
 
-func upgradeCmd(name string, parallel bool) tea.Cmd {
-	cmd := apt.UpgradeCmd(name)
-	if parallel {
-		cmd = apt.ParallelUpgradeCmd(name)
-	}
+func upgradeCmd(name string) tea.Cmd {
+	cmd := apt.ParallelUpgradeCmd(name)
 	return tea.ExecProcess(cmd, func(err error) tea.Msg {
 		return execFinishedMsg{op: "upgrade", name: name, err: err}
 	})
 }
 
-func upgradeAllCmd(parallel bool) tea.Cmd {
-	cmd := apt.UpgradeAllCmd()
-	if parallel {
-		cmd = apt.ParallelUpgradeAllCmd()
-	}
+func upgradeAllCmd() tea.Cmd {
+	cmd := apt.ParallelUpgradeAllCmd()
 	return tea.ExecProcess(cmd, func(err error) tea.Msg {
 		return execFinishedMsg{op: "upgrade-all", name: "todos", err: err}
 	})
@@ -714,7 +702,7 @@ func (a App) handleKeypress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			var cmds []tea.Cmd
 			var names []string
 			for name := range a.selected {
-				cmds = append(cmds, installCmd(name, a.parallelDL))
+				cmds = append(cmds, installCmd(name))
 				names = append(names, name)
 			}
 			a.pendingExecOp = "install"
@@ -736,7 +724,7 @@ func (a App) handleKeypress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			a.pendingExecCount = 1
 			a.loading = true
 			a.status = fmt.Sprintf("Installing %s...", pkg.Name)
-			return a, installCmd(pkg.Name, a.parallelDL)
+			return a, installCmd(pkg.Name)
 		}
 		return a, nil
 
@@ -776,7 +764,7 @@ func (a App) handleKeypress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			var cmds []tea.Cmd
 			var names []string
 			for name := range a.selected {
-				cmds = append(cmds, upgradeCmd(name, a.parallelDL))
+				cmds = append(cmds, upgradeCmd(name))
 				names = append(names, name)
 			}
 			a.pendingExecOp = "upgrade"
@@ -798,7 +786,7 @@ func (a App) handleKeypress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			a.pendingExecCount = 1
 			a.loading = true
 			a.status = fmt.Sprintf("Upgrading %s...", pkg.Name)
-			return a, upgradeCmd(pkg.Name, a.parallelDL)
+			return a, upgradeCmd(pkg.Name)
 		}
 		return a, nil
 
@@ -808,7 +796,7 @@ func (a App) handleKeypress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		a.pendingExecCount = 1
 		a.loading = true
 		a.status = "Upgrading ALL packages (sudo apt-get upgrade)..."
-		return a, upgradeAllCmd(a.parallelDL)
+		return a, upgradeAllCmd()
 
 	case msg.String() == "ctrl+r":
 		a.loading = true
@@ -1020,7 +1008,7 @@ func (a App) handleHistoryKeypress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				case history.OpRemove:
 					cmds = append(cmds, removeCmd(pkg))
 				case history.OpInstall:
-					cmds = append(cmds, installCmd(pkg, a.parallelDL))
+					cmds = append(cmds, installCmd(pkg))
 				}
 			}
 			a.pendingExecOp = string(undoOp)
@@ -1040,13 +1028,13 @@ func (a App) handleHistoryKeypress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			for _, pkg := range tx.Packages {
 				switch tx.Operation {
 				case history.OpInstall:
-					cmds = append(cmds, installCmd(pkg, a.parallelDL))
+					cmds = append(cmds, installCmd(pkg))
 				case history.OpRemove:
 					cmds = append(cmds, removeCmd(pkg))
 				case history.OpUpgrade:
-					cmds = append(cmds, upgradeCmd(pkg, a.parallelDL))
+					cmds = append(cmds, upgradeCmd(pkg))
 				case history.OpUpgradeAll:
-					cmds = append(cmds, upgradeAllCmd(a.parallelDL))
+					cmds = append(cmds, upgradeAllCmd())
 				}
 			}
 			a.pendingExecOp = string(tx.Operation)
@@ -1225,16 +1213,13 @@ func (a App) View() string {
 	// ── 2. Footer (pinned to terminal bottom)
 	var footer []string
 
-	// Package counter + parallel DL indicator
+	// Package counter
 	counterStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#8888AA"))
 	pos := a.selectedIdx + 1
 	if len(a.filtered) == 0 {
 		pos = 0
 	}
 	counterText := fmt.Sprintf("  %d/%d", pos, len(a.filtered))
-	if a.parallelDL {
-		counterText += lipgloss.NewStyle().Foreground(ui.ColorSuccess).Bold(true).Render("  ⚡parallel")
-	}
 	footer = append(footer, counterStyle.Render(counterText))
 
 	if a.searching {
