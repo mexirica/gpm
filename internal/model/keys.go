@@ -99,15 +99,15 @@ var Keys = KeyMap{
 	),
 	HistUndo: key.NewBinding(
 		key.WithKeys("z"),
-		key.WithHelp("z", "undo transaction"),
+		key.WithHelp("z", "undo"),
 	),
 	HistRedo: key.NewBinding(
 		key.WithKeys("x"),
-		key.WithHelp("x", "redo transaction"),
+		key.WithHelp("x", "redo"),
 	),
 	Fetch: key.NewBinding(
 		key.WithKeys("f"),
-		key.WithHelp("f", "fetch mirrors"),
+		key.WithHelp("f", "fetch"),
 	),
 
 	Tab: key.NewBinding(
@@ -125,6 +125,7 @@ func (k KeyMap) FullHelp() [][]key.Binding {
 		{k.Up, k.Down, k.PageUp, k.PageDown},
 		{k.Enter, k.Search, k.Select, k.SelectAll},
 		{k.Install, k.Remove, k.Upgrade, k.UpgradeAll},
-		{k.History, k.HistUndo, k.HistRedo, k.Fetch, k.Refresh, k.Help, k.Quit},
+		{k.History, k.HistUndo, k.HistRedo, k.Fetch, k.Refresh},
+		{k.Tab, k.Help, k.Quit},
 	}
 }
