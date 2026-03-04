@@ -154,9 +154,5 @@ func RenderPackageList(packages []model.Package, selected int, offset int, maxVi
 		}
 	}
 
-	total := len(packages)
-	counter := counterStyle.Render(fmt.Sprintf("  %d/%d", total, total))
-	b.WriteString(counter)
-
 	return b.String()
 }

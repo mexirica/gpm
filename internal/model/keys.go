@@ -23,6 +23,9 @@ type KeyMap struct {
 	Down        key.Binding
 	PageUp      key.Binding
 	PageDown    key.Binding
+	History     key.Binding
+	HistUndo    key.Binding
+	HistRedo    key.Binding
 }
 
 var Keys = KeyMap{
@@ -102,10 +105,22 @@ var Keys = KeyMap{
 		key.WithKeys("pgdown", "ctrl+d"),
 		key.WithHelp("pgdown", "page down"),
 	),
+	History: key.NewBinding(
+		key.WithKeys("h"),
+		key.WithHelp("h", "history"),
+	),
+	HistUndo: key.NewBinding(
+		key.WithKeys("z"),
+		key.WithHelp("z", "undo transaction"),
+	),
+	HistRedo: key.NewBinding(
+		key.WithKeys("x"),
+		key.WithHelp("x", "redo transaction"),
+	),
 }
 
 func (k KeyMap) ShortHelp() []key.Binding {
-	return []key.Binding{k.Search, k.Select, k.Install, k.Remove, k.BulkInstall, k.BulkRemove, k.Help, k.Quit}
+	return []key.Binding{k.Search, k.Select, k.Install, k.Remove, k.History, k.Help, k.Quit}
 }
 
 func (k KeyMap) FullHelp() [][]key.Binding {
@@ -113,6 +128,6 @@ func (k KeyMap) FullHelp() [][]key.Binding {
 		{k.Up, k.Down, k.PageUp, k.PageDown},
 		{k.Enter, k.Back, k.Search, k.Select, k.SelectAll},
 		{k.Install, k.Remove, k.Upgrade, k.BulkInstall, k.BulkRemove, k.BulkUpgrade, k.UpgradeAll},
-		{k.Refresh, k.Help, k.Quit},
+		{k.History, k.HistUndo, k.HistRedo, k.Refresh, k.Help, k.Quit},
 	}
 }
