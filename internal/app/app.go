@@ -324,7 +324,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.allPackages = all
 		a.applyFilter()
 		upgCount := len(msg.upgradable)
-		a.status = fmt.Sprintf("%d packages (%d installed, %d upgradable) | ? help",
+		a.status = fmt.Sprintf("%d packages (%d installed, %d upgradable) ",
 			len(a.allPackages), len(msg.installed), upgCount)
 		// Load detail + versions for visible packages
 		var cmds []tea.Cmd
@@ -499,7 +499,7 @@ func (a App) handleSearchInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		a.filterQuery = query
 		if query == "" {
 			a.applyFilter()
-			a.status = fmt.Sprintf("%d packages | ? help", len(a.filtered))
+			a.status = fmt.Sprintf("%d packages ", len(a.filtered))
 			if len(a.filtered) > 0 {
 				return a, showDetailCmd(a.filtered[0].Name)
 			}
@@ -518,7 +518,7 @@ func (a App) handleSearchInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		a.searchInput.Blur()
 		a.filterQuery = ""
 		a.applyFilter()
-		a.status = fmt.Sprintf("%d packages | ? help", len(a.filtered))
+		a.status = fmt.Sprintf("%d packages ", len(a.filtered))
 		return a, nil
 	default:
 		// Update the text input first
@@ -527,7 +527,7 @@ func (a App) handleSearchInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		// Apply fuzzy filter live as the user types
 		a.filterQuery = a.searchInput.Value()
 		a.applyFilter()
-		a.status = fmt.Sprintf("%d matching | ? help", len(a.filtered))
+		a.status = fmt.Sprintf("%d matching ", len(a.filtered))
 		// Load detail for the top result
 		var detailCmd tea.Cmd
 		if len(a.filtered) > 0 {
@@ -558,7 +558,7 @@ func (a App) handleKeypress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			a.applyFilter()
 			a.selectedIdx = 0
 			a.scrollOffset = 0
-			a.status = fmt.Sprintf("%d packages | ? help", len(a.filtered))
+			a.status = fmt.Sprintf("%d packages ", len(a.filtered))
 			var cmds []tea.Cmd
 			if len(a.filtered) > 0 {
 				cmds = append(cmds, showDetailCmd(a.filtered[0].Name))
@@ -627,7 +627,7 @@ func (a App) handleKeypress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				a.selected[pkg.Name] = true
 			}
 			count := len(a.selected)
-			a.status = fmt.Sprintf("%d selected | ? help", count)
+			a.status = fmt.Sprintf("%d selected ", count)
 			return a, nil
 		}
 		return a, nil
@@ -647,13 +647,13 @@ func (a App) handleKeypress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if allSelected {
 			// clear
 			a.selected = make(map[string]bool)
-			a.status = fmt.Sprintf("0 selected | ? help")
+			a.status = fmt.Sprintf("0 selected ")
 			return a, nil
 		}
 		for _, p := range a.filtered {
 			a.selected[p.Name] = true
 		}
-		a.status = fmt.Sprintf("%d selected | ? help", len(a.selected))
+		a.status = fmt.Sprintf("%d selected ", len(a.selected))
 		return a, nil
 
 	case msg.String() == "I":
@@ -774,7 +774,7 @@ func (a App) handleKeypress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		a.historyItems = a.historyStore.All()
 		a.historyIdx = 0
 		a.historyOffset = 0
-		a.status = fmt.Sprintf("%d transactions | esc back | z undo | x redo | ? help", len(a.historyItems))
+		a.status = fmt.Sprintf("%d transactions | esc back | z undo | x redo ", len(a.historyItems))
 		return a, nil
 
 	case msg.String() == "f":
@@ -806,7 +806,7 @@ func (a App) handleKeypress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		cmds = append(cmds, a.loadVisibleVersionsCmd())
 		tabNames := []string{"All", "Installed", "Upgradable"}
-		a.status = fmt.Sprintf("%d packages (%s) | ? help", len(a.filtered), tabNames[a.activeTab])
+		a.status = fmt.Sprintf("%d packages (%s) ", len(a.filtered), tabNames[a.activeTab])
 		return a, tea.Batch(cmds...)
 
 	case msg.String() == "shift+tab":
@@ -818,7 +818,7 @@ func (a App) handleKeypress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		cmds = append(cmds, a.loadVisibleVersionsCmd())
 		tabNames := []string{"All", "Installed", "Upgradable"}
-		a.status = fmt.Sprintf("%d packages (%s) | ? help", len(a.filtered), tabNames[a.activeTab])
+		a.status = fmt.Sprintf("%d packages (%s) ", len(a.filtered), tabNames[a.activeTab])
 		return a, tea.Batch(cmds...)
 	}
 
@@ -842,7 +842,7 @@ func (a App) handleFetchKeypress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch {
 	case msg.String() == "esc":
 		a.fetchView = false
-		a.status = fmt.Sprintf("%d packages | ? help", len(a.filtered))
+		a.status = fmt.Sprintf("%d packages ", len(a.filtered))
 		return a, nil
 
 	case msg.String() == "q" || msg.String() == "ctrl+c":
@@ -925,7 +925,7 @@ func (a App) handleHistoryKeypress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch {
 	case msg.String() == "esc" || msg.String() == "h":
 		a.historyView = false
-		a.status = fmt.Sprintf("%d packages | ? help", len(a.filtered))
+		a.status = fmt.Sprintf("%d packages ", len(a.filtered))
 		return a, nil
 
 	case msg.String() == "q" || msg.String() == "ctrl+c":

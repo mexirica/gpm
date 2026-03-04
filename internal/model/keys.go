@@ -114,11 +114,11 @@ var Keys = KeyMap{
 	),
 	HistUndo: key.NewBinding(
 		key.WithKeys("z"),
-		key.WithHelp("z", "undo transaction"),
+		key.WithHelp("z", "undo transaction (In history)"),
 	),
 	HistRedo: key.NewBinding(
 		key.WithKeys("x"),
-		key.WithHelp("x", "redo transaction"),
+		key.WithHelp("x", "redo transaction (In history)"),
 	),
 	Fetch: key.NewBinding(
 		key.WithKeys("f"),
@@ -135,7 +135,7 @@ var Keys = KeyMap{
 }
 
 func (k KeyMap) ShortHelp() []key.Binding {
-	return []key.Binding{k.Search, k.Tab, k.Select, k.Install, k.Remove, k.History, k.Fetch, k.Help, k.Quit}
+	return []key.Binding{k.Search, k.Tab, k.Select, k.Install, k.Remove, k.History, k.Quit, k.Help}
 }
 
 func (k KeyMap) FullHelp() [][]key.Binding {
