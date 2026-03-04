@@ -214,3 +214,126 @@ func IsInstalled(name string) bool {
 	}
 	return strings.Contains(out.String(), "install ok installed")
 }
+
+// PackageInfo holds version and formatted size for a package.
+type PackageInfo struct {
+	Version string
+	Size    string
+}
+
+// BatchGetInfo uses 'apt-cache show --no-all-versions' to get version and
+// installed-size for a batch of package names. It splits work into chunks
+// and runs them in parallel. Returns a map of name → PackageInfo.
+func BatchGetInfo(names []string) map[string]PackageInfo {
+	if len(names) == 0 {
+		return nil
+	}
+
+	const chunkSize = 50
+	const maxWorkers = 8
+
+	type result struct {
+		info map[string]PackageInfo
+	}
+
+	chunks := make([][]string, 0, len(names)/chunkSize+1)
+	for i := 0; i < len(names); i += chunkSize {
+		end := i + chunkSize
+		if end > len(names) {
+			end = len(names)
+		}
+		chunks = append(chunks, names[i:end])
+	}
+
+	results := make(chan result, len(chunks))
+	sem := make(chan struct{}, maxWorkers)
+
+	for _, chunk := range chunks {
+		sem <- struct{}{}
+		go func(pkgs []string) {
+			defer func() { <-sem }()
+			v := getShowInfo(pkgs)
+			results <- result{info: v}
+		}(chunk)
+	}
+
+	merged := make(map[string]PackageInfo, len(names))
+	for range chunks {
+		r := <-results
+		for k, v := range r.info {
+			merged[k] = v
+		}
+	}
+
+	return merged
+}
+
+// getShowInfo runs 'apt-cache show pkg1 pkg2 ...' and
+// parses Package, Version, and Installed-Size for each entry.
+// Only the first entry per package is kept (the candidate version).
+func getShowInfo(names []string) map[string]PackageInfo {
+	args := append([]string{"show"}, names...)
+	cmd := exec.Command("apt-cache", args...)
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = &bytes.Buffer{}
+	// Ignore error: apt-cache show returns non-zero if any package is
+	// not found, but still outputs data for the ones that exist.
+	_ = cmd.Run()
+
+	info := make(map[string]PackageInfo, len(names))
+	var curPkg string
+	var curVer string
+	var curSize string
+
+	flush := func() {
+		if curPkg != "" {
+			// Keep only the first entry per package (candidate version)
+			if _, exists := info[curPkg]; !exists {
+				info[curPkg] = PackageInfo{
+					Version: curVer,
+					Size:    formatSize(curSize),
+				}
+			}
+		}
+		curPkg = ""
+		curVer = ""
+		curSize = ""
+	}
+
+	for _, line := range strings.Split(out.String(), "\n") {
+		if line == "" {
+			flush()
+			continue
+		}
+		if strings.HasPrefix(line, "Package: ") {
+			curPkg = strings.TrimPrefix(line, "Package: ")
+		} else if strings.HasPrefix(line, "Version: ") {
+			curVer = strings.TrimPrefix(line, "Version: ")
+		} else if strings.HasPrefix(line, "Installed-Size: ") {
+			curSize = strings.TrimPrefix(line, "Installed-Size: ")
+		}
+	}
+	flush() // last entry
+
+	return info
+}
+
+// ParseShowEntry parses a single apt-cache show output and returns PackageInfo.
+func ParseShowEntry(info string) PackageInfo {
+	var ver, size string
+	for _, line := range strings.Split(info, "\n") {
+		if line == "" && ver != "" {
+			break // only first entry
+		}
+		if strings.HasPrefix(line, "Version: ") {
+			ver = strings.TrimPrefix(line, "Version: ")
+		} else if strings.HasPrefix(line, "Installed-Size: ") {
+			size = strings.TrimPrefix(line, "Installed-Size: ")
+		}
+	}
+	return PackageInfo{
+		Version: ver,
+		Size:    formatSize(size),
+	}
+}

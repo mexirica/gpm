@@ -80,8 +80,8 @@ type App struct {
 	// Parallel download toggle
 	parallelDL bool
 
-	// Lazy version loading
-	versionCache map[string]string // cached versions by package name
+	// Lazy info loading (version + size)
+	infoCache map[string]apt.PackageInfo // cached info by package name
 
 	// UI
 	spinner spinner.Model
@@ -114,7 +114,7 @@ func New() App {
 	return App{
 		upgradableMap: make(map[string]model.Package),
 		selected:      make(map[string]bool),
-		versionCache:  make(map[string]string),
+		infoCache:     make(map[string]apt.PackageInfo),
 		searchInput:   ti,
 		spinner:       s,
 		help:          h,
@@ -224,8 +224,8 @@ type allPackagesMsg struct {
 	err        error
 }
 
-type versionsLoadedMsg struct {
-	versions map[string]string
+type infoLoadedMsg struct {
+	info map[string]apt.PackageInfo
 }
 
 type searchResultMsg struct {
@@ -315,8 +315,9 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		for _, name := range msg.allNames {
 			if !seen[name] {
 				pkg := model.Package{Name: name, Installed: false}
-				if v, ok := a.versionCache[name]; ok {
-					pkg.NewVersion = v
+				if info, ok := a.infoCache[name]; ok {
+					pkg.NewVersion = info.Version
+					pkg.Size = info.Size
 				}
 				all = append(all, pkg)
 				seen[name] = true
@@ -335,19 +336,29 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, a.loadVisibleVersionsCmd())
 		return a, tea.Batch(cmds...)
 
-	case versionsLoadedMsg:
-		// Merge fetched versions into cache and update packages
-		for name, ver := range msg.versions {
-			a.versionCache[name] = ver
+	case infoLoadedMsg:
+		// Merge fetched info into cache and update packages
+		for name, info := range msg.info {
+			a.infoCache[name] = info
 		}
 		for i := range a.allPackages {
-			if v, ok := msg.versions[a.allPackages[i].Name]; ok {
-				a.allPackages[i].NewVersion = v
+			if info, ok := msg.info[a.allPackages[i].Name]; ok {
+				if a.allPackages[i].Version == "" {
+					a.allPackages[i].NewVersion = info.Version
+				}
+				if a.allPackages[i].Size == "" {
+					a.allPackages[i].Size = info.Size
+				}
 			}
 		}
 		for i := range a.filtered {
-			if v, ok := msg.versions[a.filtered[i].Name]; ok {
-				a.filtered[i].NewVersion = v
+			if info, ok := msg.info[a.filtered[i].Name]; ok {
+				if a.filtered[i].Version == "" {
+					a.filtered[i].NewVersion = info.Version
+				}
+				if a.filtered[i].Size == "" {
+					a.filtered[i].Size = info.Size
+				}
 			}
 		}
 		return a, nil
@@ -358,11 +369,25 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.status = ui.ErrorStyle.Render(fmt.Sprintf("Error in search: %v", msg.err))
 			return a, nil
 		}
-		// Mark installed and upgradable in the results
+		// Build lookup from allPackages for installed info
+		installedMap := make(map[string]model.Package, len(a.allPackages))
+		for _, p := range a.allPackages {
+			if p.Installed {
+				installedMap[p.Name] = p
+			}
+		}
+		// Enrich search results with version/size from installed or cache
 		for i := range msg.pkgs {
 			if up, ok := a.upgradableMap[msg.pkgs[i].Name]; ok {
 				msg.pkgs[i].Upgradable = true
 				msg.pkgs[i].NewVersion = up.NewVersion
+			}
+			if inst, ok := installedMap[msg.pkgs[i].Name]; ok {
+				msg.pkgs[i].Version = inst.Version
+				msg.pkgs[i].Size = inst.Size
+			} else if info, ok := a.infoCache[msg.pkgs[i].Name]; ok {
+				msg.pkgs[i].NewVersion = info.Version
+				msg.pkgs[i].Size = info.Size
 			}
 		}
 		a.filtered = msg.pkgs
@@ -381,6 +406,33 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.detailInfo = fmt.Sprintf("Error: %v", msg.err)
 		} else {
 			a.detailInfo = msg.info
+			// Parse version/size from the detail info and update the list
+			pi := apt.ParseShowEntry(msg.info)
+			if pi.Version != "" || pi.Size != "" {
+				a.infoCache[msg.name] = pi
+				for i := range a.filtered {
+					if a.filtered[i].Name == msg.name {
+						if a.filtered[i].Version == "" && a.filtered[i].NewVersion == "" {
+							a.filtered[i].NewVersion = pi.Version
+						}
+						if a.filtered[i].Size == "" {
+							a.filtered[i].Size = pi.Size
+						}
+						break
+					}
+				}
+				for i := range a.allPackages {
+					if a.allPackages[i].Name == msg.name {
+						if a.allPackages[i].Version == "" && a.allPackages[i].NewVersion == "" {
+							a.allPackages[i].NewVersion = pi.Version
+						}
+						if a.allPackages[i].Size == "" {
+							a.allPackages[i].Size = pi.Size
+						}
+						break
+					}
+				}
+			}
 		}
 		a.detailName = msg.name
 		return a, nil
@@ -1084,8 +1136,8 @@ func (a *App) applyFilter() {
 	a.scrollOffset = 0
 }
 
-// loadVisibleVersionsCmd returns a Cmd that fetches versions for visible packages
-// that are not yet in the cache.
+// loadVisibleVersionsCmd returns a Cmd that fetches version and size info for
+// visible packages that are not yet in the cache.
 func (a *App) loadVisibleVersionsCmd() tea.Cmd {
 	if len(a.filtered) == 0 {
 		return nil
@@ -1105,7 +1157,7 @@ func (a *App) loadVisibleVersionsCmd() tea.Cmd {
 	var names []string
 	for i := start; i < end; i++ {
 		name := a.filtered[i].Name
-		if _, ok := a.versionCache[name]; !ok {
+		if _, ok := a.infoCache[name]; !ok {
 			names = append(names, name)
 		}
 	}
@@ -1113,8 +1165,8 @@ func (a *App) loadVisibleVersionsCmd() tea.Cmd {
 		return nil
 	}
 	return func() tea.Msg {
-		versions := apt.BatchGetVersions(names)
-		return versionsLoadedMsg{versions: versions}
+		info := apt.BatchGetInfo(names)
+		return infoLoadedMsg{info: info}
 	}
 }
 
