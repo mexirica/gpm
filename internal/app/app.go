@@ -122,6 +122,7 @@ func New() App {
 		status:        "Loading packages...",
 		loading:       true,
 		historyStore:  history.Load(),
+		parallelDL:    true,
 	}
 }
 
@@ -656,7 +657,7 @@ func (a App) handleKeypress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		a.status = fmt.Sprintf("%d selected ", len(a.selected))
 		return a, nil
 
-	case msg.String() == "I":
+	case msg.String() == "i":
 		if len(a.selected) > 0 {
 			var cmds []tea.Cmd
 			var names []string
@@ -672,42 +673,6 @@ func (a App) handleKeypress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			a.selected = make(map[string]bool)
 			return a, tea.Batch(cmds...)
 		}
-
-	case msg.String() == "R":
-		if len(a.selected) > 0 {
-			var cmds []tea.Cmd
-			var names []string
-			for name := range a.selected {
-				cmds = append(cmds, removeCmd(name))
-				names = append(names, name)
-			}
-			a.pendingExecOp = "remove"
-			a.pendingExecPkgs = names
-			a.pendingExecCount = len(cmds)
-			a.loading = true
-			a.status = fmt.Sprintf("Removing %d packages...", len(cmds))
-			a.selected = make(map[string]bool)
-			return a, tea.Batch(cmds...)
-		}
-
-	case msg.String() == "U":
-		if len(a.selected) > 0 {
-			var cmds []tea.Cmd
-			var names []string
-			for name := range a.selected {
-				cmds = append(cmds, upgradeCmd(name, a.parallelDL))
-				names = append(names, name)
-			}
-			a.pendingExecOp = "upgrade"
-			a.pendingExecPkgs = names
-			a.pendingExecCount = len(cmds)
-			a.loading = true
-			a.status = fmt.Sprintf("Upgrading %d packages...", len(cmds))
-			a.selected = make(map[string]bool)
-			return a, tea.Batch(cmds...)
-		}
-
-	case msg.String() == "i":
 		if len(a.filtered) > 0 && a.selectedIdx < len(a.filtered) {
 			pkg := a.filtered[a.selectedIdx]
 			if pkg.Installed {
@@ -724,6 +689,21 @@ func (a App) handleKeypress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return a, nil
 
 	case msg.String() == "r":
+		if len(a.selected) > 0 {
+			var cmds []tea.Cmd
+			var names []string
+			for name := range a.selected {
+				cmds = append(cmds, removeCmd(name))
+				names = append(names, name)
+			}
+			a.pendingExecOp = "remove"
+			a.pendingExecPkgs = names
+			a.pendingExecCount = len(cmds)
+			a.loading = true
+			a.status = fmt.Sprintf("Removing %d packages...", len(cmds))
+			a.selected = make(map[string]bool)
+			return a, tea.Batch(cmds...)
+		}
 		if len(a.filtered) > 0 && a.selectedIdx < len(a.filtered) {
 			pkg := a.filtered[a.selectedIdx]
 			if !pkg.Installed {
@@ -740,6 +720,21 @@ func (a App) handleKeypress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return a, nil
 
 	case msg.String() == "u":
+		if len(a.selected) > 0 {
+			var cmds []tea.Cmd
+			var names []string
+			for name := range a.selected {
+				cmds = append(cmds, upgradeCmd(name, a.parallelDL))
+				names = append(names, name)
+			}
+			a.pendingExecOp = "upgrade"
+			a.pendingExecPkgs = names
+			a.pendingExecCount = len(cmds)
+			a.loading = true
+			a.status = fmt.Sprintf("Upgrading %d packages...", len(cmds))
+			a.selected = make(map[string]bool)
+			return a, tea.Batch(cmds...)
+		}
 		if len(a.filtered) > 0 && a.selectedIdx < len(a.filtered) {
 			pkg := a.filtered[a.selectedIdx]
 			if !pkg.Upgradable {
@@ -787,15 +782,6 @@ func (a App) handleKeypress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		a.loading = true
 		a.status = "Detecting distro and fetching mirror list..."
 		return a, tea.Batch(a.spinner.Tick, fetchMirrorsCmd())
-
-	case msg.String() == "p":
-		a.parallelDL = !a.parallelDL
-		if a.parallelDL {
-			a.status = ui.SuccessStyle.Render("✔ Parallel downloads ENABLED")
-		} else {
-			a.status = "Parallel downloads disabled"
-		}
-		return a, nil
 
 	case msg.String() == "tab":
 		a.activeTab = (a.activeTab + 1) % 3
