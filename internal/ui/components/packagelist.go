@@ -33,7 +33,7 @@ func RenderPackageList(packages []model.Package, selected int, offset int, maxVi
 			Render("\n  Nenhum pacote encontrado.\n")
 	}
 
-	// prefix takes: cursor(3) + space(1) + selMarker(3) + space(1) + badge(2) + space(1) = ~11
+	// prefix takes: cursor(3) + space(1) + selMarker(3) + space(1) + badge(26) + space(1) = ~11
 	prefixW := 11
 	available := width - prefixW - 4 // 4 for column gaps (2 between each)
 	if available < 40 {

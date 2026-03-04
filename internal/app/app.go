@@ -21,11 +21,22 @@ import (
 	"github.com/mexirica/gpm/internal/ui/components"
 )
 
+type tabKind int
+
+const (
+	tabAll tabKind = iota
+	tabInstalled
+	tabUpgradable
+)
+
 type App struct {
 	// Data
 	allPackages   []model.Package
 	filtered      []model.Package
 	upgradableMap map[string]model.Package
+
+	// Tab filter
+	activeTab tabKind
 
 	// Selection state
 	selectedIdx  int
@@ -777,6 +788,30 @@ func (a App) handleKeypress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			a.status = "Parallel downloads disabled"
 		}
 		return a, nil
+
+	case msg.String() == "tab":
+		a.activeTab = (a.activeTab + 1) % 3
+		a.applyFilter()
+		var cmds []tea.Cmd
+		if len(a.filtered) > 0 {
+			cmds = append(cmds, showDetailCmd(a.filtered[0].Name))
+		}
+		cmds = append(cmds, a.loadVisibleVersionsCmd())
+		tabNames := []string{"All", "Installed", "Upgradable"}
+		a.status = fmt.Sprintf("%d packages (%s) | ? help", len(a.filtered), tabNames[a.activeTab])
+		return a, tea.Batch(cmds...)
+
+	case msg.String() == "shift+tab":
+		a.activeTab = (a.activeTab + 2) % 3
+		a.applyFilter()
+		var cmds []tea.Cmd
+		if len(a.filtered) > 0 {
+			cmds = append(cmds, showDetailCmd(a.filtered[0].Name))
+		}
+		cmds = append(cmds, a.loadVisibleVersionsCmd())
+		tabNames := []string{"All", "Installed", "Upgradable"}
+		a.status = fmt.Sprintf("%d packages (%s) | ? help", len(a.filtered), tabNames[a.activeTab])
+		return a, tea.Batch(cmds...)
 	}
 
 	return a, nil
@@ -999,12 +1034,31 @@ type scoredPackage struct {
 }
 
 func (a *App) applyFilter() {
+	// Start from allPackages, apply tab filter first
+	var source []model.Package
+	switch a.activeTab {
+	case tabInstalled:
+		for _, p := range a.allPackages {
+			if p.Installed {
+				source = append(source, p)
+			}
+		}
+	case tabUpgradable:
+		for _, p := range a.allPackages {
+			if p.Upgradable {
+				source = append(source, p)
+			}
+		}
+	default:
+		source = a.allPackages
+	}
+
 	if a.filterQuery == "" {
-		a.filtered = a.allPackages
+		a.filtered = source
 	} else {
 		minScore := fuzzy.MinQuality(len(a.filterQuery))
 		var scored []scoredPackage
-		for _, p := range a.allPackages {
+		for _, p := range source {
 			nameRes := fuzzy.Score(a.filterQuery, p.Name)
 			descRes := fuzzy.Score(a.filterQuery, p.Description)
 
@@ -1082,26 +1136,16 @@ func (a *App) adjustScroll() {
 
 // listHeight returns how many package lines fit in the upper half.
 func (a App) listHeight() int {
-	// Reserve space: header(1) + prompt(1) + separator(1) + details(detailHeight) + status(1) + help(2) + margins(2)
-	detailH := a.detailHeight()
-	h := a.height - detailH - 8
+	// Layout: tabBar(1) + colHeader(1) + colSep(1) + list(h) + counter(1) + search(1) + sep(1) + detail(10) + status(1) + help(1) = height
+	h := a.height - a.detailHeight() - 10
 	if h < 5 {
 		h = 5
 	}
 	return h
 }
 
-// detailHeight returns how many detail lines to show.
+// detailHeight returns the fixed number of detail lines (matches displayFields count).
 func (a App) detailHeight() int {
-	if a.height <= 20 {
-		return 5
-	}
-	if a.height <= 30 {
-		return 7
-	}
-	if a.height <= 40 {
-		return 9
-	}
 	return 10
 }
 
@@ -1122,13 +1166,15 @@ func (a App) View() string {
 		return a.renderHistoryView(w)
 	}
 
-	// ── 1. Package list (upper region)
+	// ── 1. Tab bar + Package list (upper region)
+	tabBar := a.renderTabBar()
 	var listView string
 	if a.loading {
 		listView = fmt.Sprintf("\n  %s Loading...\n", a.spinner.View())
 	} else {
 		listView = components.RenderPackageList(a.filtered, a.selectedIdx, a.scrollOffset, a.listHeight(), w, a.selected)
 	}
+	listView = tabBar + "\n" + listView
 
 	// ── 2. Footer (pinned to terminal bottom)
 	var footer []string
@@ -1186,6 +1232,28 @@ func (a App) View() string {
 	}
 
 	return listView + strings.Repeat("\n", gap) + footerView
+}
+
+// renderTabBar renders the tab bar for filtering packages.
+func (a App) renderTabBar() string {
+	tabs := []struct {
+		label string
+		kind  tabKind
+	}{
+		{"  All  ", tabAll},
+		{" Installed ", tabInstalled},
+		{" Upgradable ", tabUpgradable},
+	}
+
+	var parts []string
+	for _, t := range tabs {
+		if t.kind == a.activeTab {
+			parts = append(parts, ui.TabActiveStyle.Render(t.label))
+		} else {
+			parts = append(parts, ui.TabInactiveStyle.Render(t.label))
+		}
+	}
+	return lipgloss.JoinHorizontal(lipgloss.Top, parts...)
 }
 
 // renderBasicDetail shows basic package info when apt-cache show hasn't loaded yet.

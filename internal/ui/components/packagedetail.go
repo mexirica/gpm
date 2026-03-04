@@ -95,7 +95,7 @@ func RenderPackageDetail(info string, width int, maxLines int, pageNum int) stri
 	for _, key := range displayFields {
 		val, ok := fields[key]
 		if !ok || val == "" {
-			continue
+			val = "N/A"
 		}
 
 		display := val
@@ -106,10 +106,17 @@ func RenderPackageDetail(info string, width int, maxLines int, pageNum int) stri
 		var line string
 		switch key {
 		case "Homepage":
-			line = fmt.Sprintf("  %s %s %s",
-				detailLabel.Render(key),
-				detailSep.Render(":"),
-				lipgloss.NewStyle().Foreground(lipgloss.Color("#00BCD4")).Render(display))
+			if val == "N/A" {
+				line = fmt.Sprintf("  %s %s %s",
+					detailLabel.Render(key),
+					detailSep.Render(":"),
+					detailMuted.Render(display))
+			} else {
+				line = fmt.Sprintf("  %s %s %s",
+					detailLabel.Render(key),
+					detailSep.Render(":"),
+					lipgloss.NewStyle().Foreground(lipgloss.Color("#00BCD4")).Render(display))
+			}
 		case "Status":
 			statusColor := lipgloss.Color("#6C6C6C")
 			if strings.Contains(val, "Upgrade") {

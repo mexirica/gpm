@@ -28,6 +28,7 @@ type KeyMap struct {
 	HistRedo    key.Binding
 	Fetch       key.Binding
 	ParallelDL  key.Binding
+	Tab         key.Binding
 }
 
 var Keys = KeyMap{
@@ -127,10 +128,14 @@ var Keys = KeyMap{
 		key.WithKeys("p"),
 		key.WithHelp("p", "toggle parallel dl"),
 	),
+	Tab: key.NewBinding(
+		key.WithKeys("tab"),
+		key.WithHelp("tab", "switch tab"),
+	),
 }
 
 func (k KeyMap) ShortHelp() []key.Binding {
-	return []key.Binding{k.Search, k.Select, k.Install, k.Remove, k.History, k.Fetch, k.Help, k.Quit}
+	return []key.Binding{k.Search, k.Tab, k.Select, k.Install, k.Remove, k.History, k.Fetch, k.Help, k.Quit}
 }
 
 func (k KeyMap) FullHelp() [][]key.Binding {
