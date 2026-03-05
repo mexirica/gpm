@@ -80,6 +80,10 @@ type App struct {
 	// Lazy info loading (version + size)
 	infoCache map[string]apt.PackageInfo // cached info by package name
 
+	// Two-phase loading state
+	allNamesLoaded bool // true after all package names have been loaded
+	installedCount int  // count of installed packages
+
 	// UI
 	spinner spinner.Model
 	help    help.Model
@@ -122,18 +126,82 @@ func New() App {
 	}
 }
 
+// loadFastCmd loads only installed + upgradable packages (Phase 1, ~100ms).
+// All package names are loaded in background via loadAllNamesCmd.
+func loadFastCmd() tea.Msg {
+	type result struct {
+		pkgs []model.Package
+		err  error
+	}
+	installedCh := make(chan result, 1)
+	upgradableCh := make(chan result, 1)
+
+	go func() {
+		p, err := apt.ListInstalled()
+		installedCh <- result{p, err}
+	}()
+	go func() {
+		p, err := apt.ListUpgradable()
+		upgradableCh <- result{p, err}
+	}()
+
+	ir := <-installedCh
+	ur := <-upgradableCh
+
+	if ir.err != nil {
+		return fastLoadMsg{err: ir.err}
+	}
+	return fastLoadMsg{installed: ir.pkgs, upgradable: ur.pkgs}
+}
+
+// loadAllNamesCmd loads all available package names in background (Phase 2).
+func loadAllNamesCmd() tea.Cmd {
+	return func() tea.Msg {
+		names, err := apt.ListAllNames()
+		return allNamesMsg{names: names, err: err}
+	}
+}
+
+// loadAllCmd loads everything (used for reloads after exec/ctrl+r).
 func loadAllCmd() tea.Msg {
-	// Load all available package names (fast: apt-cache pkgnames)
-	allNames, err := apt.ListAllNames()
-	if err != nil {
-		allNames = nil
+	type namesResult struct {
+		names []string
+		err   error
 	}
-	installed, err := apt.ListInstalled()
-	if err != nil {
-		return allPackagesMsg{nil, nil, nil, err}
+	type pkgResult struct {
+		pkgs []model.Package
+		err  error
 	}
-	upgradable, _ := apt.ListUpgradable()
-	return allPackagesMsg{allNames, installed, upgradable, nil}
+
+	namesCh := make(chan namesResult, 1)
+	installedCh := make(chan pkgResult, 1)
+	upgradableCh := make(chan pkgResult, 1)
+
+	go func() {
+		n, err := apt.ListAllNames()
+		namesCh <- namesResult{n, err}
+	}()
+	go func() {
+		p, err := apt.ListInstalled()
+		installedCh <- pkgResult{p, err}
+	}()
+	go func() {
+		p, err := apt.ListUpgradable()
+		upgradableCh <- pkgResult{p, err}
+	}()
+
+	nr := <-namesCh
+	ir := <-installedCh
+	ur := <-upgradableCh
+
+	var allNames []string
+	if nr.err == nil {
+		allNames = nr.names
+	}
+	if ir.err != nil {
+		return allPackagesMsg{nil, nil, nil, ir.err}
+	}
+	return allPackagesMsg{allNames, ir.pkgs, ur.pkgs, nil}
 }
 
 func searchCmd(query string) tea.Cmd {
@@ -204,6 +272,19 @@ func waitForFetchResult(ch <-chan fetch.TestResult) tea.Cmd {
 	}
 }
 
+// fastLoadMsg is the result of Phase 1 startup (installed + upgradable only).
+type fastLoadMsg struct {
+	installed  []model.Package
+	upgradable []model.Package
+	err        error
+}
+
+// allNamesMsg is the result of Phase 2 background load (all package names).
+type allNamesMsg struct {
+	names []string
+	err   error
+}
+
 type allPackagesMsg struct {
 	allNames   []string
 	installed  []model.Package
@@ -249,7 +330,7 @@ type fetchApplyMsg struct {
 }
 
 func (a App) Init() tea.Cmd {
-	return tea.Batch(a.spinner.Tick, loadAllCmd)
+	return tea.Batch(a.spinner.Tick, loadFastCmd)
 }
 
 func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -265,6 +346,84 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		var cmd tea.Cmd
 		a.spinner, cmd = a.spinner.Update(msg)
 		return a, cmd
+
+	case fastLoadMsg:
+		a.loading = false
+		if msg.err != nil {
+			a.status = ui.ErrorStyle.Render(fmt.Sprintf("Error: %v", msg.err))
+			return a, nil
+		}
+		// Build upgradable map
+		a.upgradableMap = make(map[string]model.Package)
+		for _, p := range msg.upgradable {
+			a.upgradableMap[p.Name] = p
+		}
+		// Build installed packages with upgradable annotations
+		var all []model.Package
+		for _, p := range msg.installed {
+			if up, ok := a.upgradableMap[p.Name]; ok {
+				p.Upgradable = true
+				p.NewVersion = up.NewVersion
+			}
+			all = append(all, p)
+		}
+		a.allPackages = all
+		a.installedCount = len(msg.installed)
+		a.applyFilter()
+		upgCount := len(msg.upgradable)
+		a.status = fmt.Sprintf("%d installed (%d upgradable) — loading all packages...",
+			a.installedCount, upgCount)
+		// Load detail + versions for visible packages, then trigger Phase 2
+		var cmds []tea.Cmd
+		if len(a.filtered) > 0 {
+			cmds = append(cmds, showDetailCmd(a.filtered[0].Name))
+		}
+		cmds = append(cmds, a.loadVisibleVersionsCmd())
+		cmds = append(cmds, loadAllNamesCmd())
+		return a, tea.Batch(cmds...)
+
+	case allNamesMsg:
+		if msg.err != nil {
+			// All names failed to load, but we still have installed packages
+			a.allNamesLoaded = true
+			a.status = fmt.Sprintf("%d installed (%d upgradable) ",
+				a.installedCount, len(a.upgradableMap))
+			return a, nil
+		}
+		a.allNamesLoaded = true
+		// Add non-installed package names
+		seen := make(map[string]bool, len(a.allPackages))
+		for _, p := range a.allPackages {
+			seen[p.Name] = true
+		}
+		for _, name := range msg.names {
+			if !seen[name] {
+				pkg := model.Package{Name: name, Installed: false}
+				if info, ok := a.infoCache[name]; ok {
+					pkg.NewVersion = info.Version
+					pkg.Size = info.Size
+				}
+				a.allPackages = append(a.allPackages, pkg)
+				seen[name] = true
+			}
+		}
+		// Re-apply filter preserving user position
+		prevIdx := a.selectedIdx
+		prevOffset := a.scrollOffset
+		a.applyFilter()
+		a.selectedIdx = prevIdx
+		a.scrollOffset = prevOffset
+		if a.selectedIdx >= len(a.filtered) {
+			a.selectedIdx = len(a.filtered) - 1
+			if a.selectedIdx < 0 {
+				a.selectedIdx = 0
+			}
+		}
+		a.status = fmt.Sprintf("%d packages (%d installed, %d upgradable) ",
+			len(a.allPackages), a.installedCount, len(a.upgradableMap))
+		var cmds []tea.Cmd
+		cmds = append(cmds, a.loadVisibleVersionsCmd())
+		return a, tea.Batch(cmds...)
 
 	case allPackagesMsg:
 		a.loading = false
@@ -311,10 +470,12 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 		a.allPackages = all
+		a.installedCount = len(msg.installed)
+		a.allNamesLoaded = true
 		a.applyFilter()
 		upgCount := len(msg.upgradable)
 		a.status = fmt.Sprintf("%d packages (%d installed, %d upgradable) ",
-			len(a.allPackages), len(msg.installed), upgCount)
+			len(a.allPackages), a.installedCount, upgCount)
 		// Load detail + versions for visible packages
 		var cmds []tea.Cmd
 		if len(a.filtered) > 0 {
