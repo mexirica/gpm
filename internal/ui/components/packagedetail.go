@@ -80,7 +80,7 @@ func parseFields(info string) map[string]string {
 
 func RenderPackageDetail(info string, width int, maxLines int, pageNum int) string {
 	if info == "" {
-		return detailMuted.Render("  Nenhum pacote selecionado.")
+		return detailMuted.Render("  No package selected.")
 	}
 
 	fields := parseFields(info)

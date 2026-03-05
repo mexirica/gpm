@@ -54,12 +54,12 @@ type App struct {
 	// Multi-selection for bulk actions (by package name)
 	selected map[string]bool
 
-	// History
-	historyStore      *history.Store
-	historyView       bool
-	historyItems      []history.Transaction
-	historyIdx        int
-	historyOffset     int
+	// Transaction
+	transactionStore  *history.Store
+	transactionView   bool
+	transactionItems  []history.Transaction
+	transactionIdx    int
+	transactionOffset int
 	pendingExecOp     string   // operation in progress (for recording)
 	pendingExecPkgs   []string // packages in progress
 	pendingExecCount  int      // how many exec commands still pending
@@ -113,16 +113,16 @@ func New() App {
 	h.Styles.FullSeparator = lipgloss.NewStyle().Foreground(lipgloss.Color("#5B3FC4"))
 
 	return App{
-		upgradableMap: make(map[string]model.Package),
-		selected:      make(map[string]bool),
-		infoCache:     make(map[string]apt.PackageInfo),
-		searchInput:   ti,
-		spinner:       s,
-		help:          h,
-		keys:          model.Keys,
-		status:        "Loading packages...",
-		loading:       true,
-		historyStore:  history.Load(),
+		upgradableMap:    make(map[string]model.Package),
+		selected:         make(map[string]bool),
+		infoCache:        make(map[string]apt.PackageInfo),
+		searchInput:      ti,
+		spinner:          s,
+		help:             h,
+		keys:             model.Keys,
+		status:           "Loading packages...",
+		loading:          true,
+		transactionStore: history.Load(),
 	}
 }
 
@@ -602,7 +602,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if len(pkgs) == 0 {
 			pkgs = []string{msg.name}
 		}
-		a.historyStore.Record(op, pkgs, success)
+		a.transactionStore.Record(op, pkgs, success)
 		a.pendingExecPkgs = nil
 		a.pendingExecOp = ""
 		a.pendingExecFailed = false
@@ -679,8 +679,8 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if a.fetchView {
 			return a.handleFetchKeypress(msg)
 		}
-		if a.historyView {
-			return a.handleHistoryKeypress(msg)
+		if a.transactionView {
+			return a.handleTransactionKeypress(msg)
 		}
 		if a.searching {
 			return a.handleSearchInput(msg)
@@ -965,11 +965,11 @@ func (a App) handleKeypress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return a, loadAllCmd
 
 	case msg.String() == "t":
-		a.historyView = true
-		a.historyItems = a.historyStore.All()
-		a.historyIdx = 0
-		a.historyOffset = 0
-		a.status = fmt.Sprintf("%d transactions | esc back | z undo | x redo ", len(a.historyItems))
+		a.transactionView = true
+		a.transactionItems = a.transactionStore.All()
+		a.transactionIdx = 0
+		a.transactionOffset = 0
+		a.status = fmt.Sprintf("%d transactions | esc back | z undo | x redo ", len(a.transactionItems))
 		return a, nil
 
 	case msg.String() == "f":
@@ -1106,11 +1106,11 @@ func (a *App) adjustFetchScroll() {
 	}
 }
 
-// handleHistoryKeypress handles key events when the history view is active.
-func (a App) handleHistoryKeypress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+// handleTransactionKeypress handles key events when the transaction view is active.
+func (a App) handleTransactionKeypress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch {
 	case msg.String() == "esc" || msg.String() == "t":
-		a.historyView = false
+		a.transactionView = false
 		a.status = fmt.Sprintf("%d packages ", len(a.filtered))
 		return a, nil
 
@@ -1122,41 +1122,41 @@ func (a App) handleHistoryKeypress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return a, nil
 
 	case msg.String() == "j" || msg.String() == "down":
-		if a.historyIdx < len(a.historyItems)-1 {
-			a.historyIdx++
-			a.adjustHistoryScroll()
+		if a.transactionIdx < len(a.transactionItems)-1 {
+			a.transactionIdx++
+			a.adjustTransactionScroll()
 		}
 		return a, nil
 
 	case msg.String() == "k" || msg.String() == "up":
-		if a.historyIdx > 0 {
-			a.historyIdx--
-			a.adjustHistoryScroll()
+		if a.transactionIdx > 0 {
+			a.transactionIdx--
+			a.adjustTransactionScroll()
 		}
 		return a, nil
 
 	case msg.String() == "ctrl+d" || msg.String() == "pgdown":
-		a.historyIdx += a.listHeight()
-		if a.historyIdx >= len(a.historyItems) {
-			a.historyIdx = len(a.historyItems) - 1
+		a.transactionIdx += a.listHeight()
+		if a.transactionIdx >= len(a.transactionItems) {
+			a.transactionIdx = len(a.transactionItems) - 1
 		}
-		if a.historyIdx < 0 {
-			a.historyIdx = 0
+		if a.transactionIdx < 0 {
+			a.transactionIdx = 0
 		}
-		a.adjustHistoryScroll()
+		a.adjustTransactionScroll()
 		return a, nil
 
 	case msg.String() == "ctrl+u" || msg.String() == "pgup":
-		a.historyIdx -= a.listHeight()
-		if a.historyIdx < 0 {
-			a.historyIdx = 0
+		a.transactionIdx -= a.listHeight()
+		if a.transactionIdx < 0 {
+			a.transactionIdx = 0
 		}
-		a.adjustHistoryScroll()
+		a.adjustTransactionScroll()
 		return a, nil
 
 	case msg.String() == "z":
-		if len(a.historyItems) > 0 && a.historyIdx < len(a.historyItems) {
-			tx := a.historyItems[a.historyIdx]
+		if len(a.transactionItems) > 0 && a.transactionIdx < len(a.transactionItems) {
+			tx := a.transactionItems[a.transactionIdx]
 			if !tx.Success {
 				a.status = ui.ErrorStyle.Render("Cannot undo a failed transaction.")
 				return a, nil
@@ -1174,7 +1174,7 @@ func (a App) handleHistoryKeypress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			a.pendingExecOp = string(undoOp)
 			a.pendingExecPkgs = tx.Packages
 			a.pendingExecCount = len(cmds)
-			a.historyView = false
+			a.transactionView = false
 			a.loading = true
 			a.status = fmt.Sprintf("Undoing #%d (%s %d packages)...", tx.ID, undoOp, len(tx.Packages))
 			return a, tea.Batch(cmds...)
@@ -1182,8 +1182,8 @@ func (a App) handleHistoryKeypress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return a, nil
 
 	case msg.String() == "x":
-		if len(a.historyItems) > 0 && a.historyIdx < len(a.historyItems) {
-			tx := a.historyItems[a.historyIdx]
+		if len(a.transactionItems) > 0 && a.transactionIdx < len(a.transactionItems) {
+			tx := a.transactionItems[a.transactionIdx]
 			var cmds []tea.Cmd
 			for _, pkg := range tx.Packages {
 				switch tx.Operation {
@@ -1200,7 +1200,7 @@ func (a App) handleHistoryKeypress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			a.pendingExecOp = string(tx.Operation)
 			a.pendingExecPkgs = tx.Packages
 			a.pendingExecCount = len(cmds)
-			a.historyView = false
+			a.transactionView = false
 			a.loading = true
 			a.status = fmt.Sprintf("Redoing #%d (%s %d packages)...", tx.ID, tx.Operation, len(tx.Packages))
 			return a, tea.Batch(cmds...)
@@ -1211,13 +1211,13 @@ func (a App) handleHistoryKeypress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return a, nil
 }
 
-func (a *App) adjustHistoryScroll() {
+func (a *App) adjustTransactionScroll() {
 	h := a.listHeight()
-	if a.historyIdx < a.historyOffset {
-		a.historyOffset = a.historyIdx
+	if a.transactionIdx < a.transactionOffset {
+		a.transactionOffset = a.transactionIdx
 	}
-	if a.historyIdx >= a.historyOffset+h {
-		a.historyOffset = a.historyIdx - h + 1
+	if a.transactionIdx >= a.transactionOffset+h {
+		a.transactionOffset = a.transactionIdx - h + 1
 	}
 }
 
@@ -1356,9 +1356,9 @@ func (a App) View() string {
 		return a.renderFetchView(w)
 	}
 
-	// ── History view
-	if a.historyView {
-		return a.renderHistoryView(w)
+	// ── Transaction view
+	if a.transactionView {
+		return a.renderTransactionView(w)
 	}
 
 	// ── 1. Tab bar + Package list (upper region)
@@ -1538,14 +1538,14 @@ func (a App) renderFetchView(w int) string {
 	return upperView + strings.Repeat("\n", gap) + footerView
 }
 
-// renderHistoryView renders the full history screen.
-func (a App) renderHistoryView(w int) string {
+// renderTransactionView renders the full transaction screen.
+func (a App) renderTransactionView(w int) string {
 	// Title
 	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(ui.ColorWhite).Background(ui.ColorPrimary).Padding(0, 2)
 	title := titleStyle.Render(" GPM Transaction History ")
 
 	// ── 1. Upper region: title + list
-	listView := components.RenderHistoryList(a.historyItems, a.historyIdx, a.historyOffset, a.listHeight(), w)
+	listView := components.RenderTransactionList(a.transactionItems, a.transactionIdx, a.transactionOffset, a.listHeight(), w)
 	upperView := title + "\n" + listView
 
 	// ── 2. Footer (pinned to bottom)
@@ -1553,15 +1553,15 @@ func (a App) renderHistoryView(w int) string {
 
 	// Transaction counter
 	counterStyle := lipgloss.NewStyle().Foreground(ui.ColorSecondary)
-	footer = append(footer, counterStyle.Render(fmt.Sprintf("  %d transactions", len(a.historyItems))))
+	footer = append(footer, counterStyle.Render(fmt.Sprintf("  %d transactions", len(a.transactionItems))))
 
 	// Separator + detail
 	sep := lipgloss.NewStyle().Foreground(ui.ColorPrimary).Render(strings.Repeat("─", w))
 	footer = append(footer, sep)
 
-	if len(a.historyItems) > 0 && a.historyIdx < len(a.historyItems) {
-		tx := a.historyItems[a.historyIdx]
-		detail := components.RenderHistoryDetail(tx, w, a.detailHeight())
+	if len(a.transactionItems) > 0 && a.transactionIdx < len(a.transactionItems) {
+		tx := a.transactionItems[a.transactionIdx]
+		detail := components.RenderTransactionDetail(tx, w, a.detailHeight())
 		footer = append(footer, detail)
 	}
 

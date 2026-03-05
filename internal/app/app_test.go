@@ -33,8 +33,8 @@ func TestNewApp(t *testing.T) {
 	if a.status != "Loading packages..." {
 		t.Errorf("unexpected initial status: %s", a.status)
 	}
-	if a.historyStore == nil {
-		t.Error("historyStore should be initialized")
+	if a.transactionStore == nil {
+		t.Error("transactionStore should be initialized")
 	}
 }
 
@@ -305,21 +305,21 @@ func TestTabSwitching(t *testing.T) {
 	}
 }
 
-func TestHistoryViewToggle(t *testing.T) {
+func TestTransactionViewToggle(t *testing.T) {
 	a := newTestApp()
 
-	// Open history
-	m, _ := a.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'h'}})
+	// Open transaction view
+	m, _ := a.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'t'}})
 	app := m.(App)
-	if !app.historyView {
-		t.Error("expected historyView=true after 'h'")
+	if !app.transactionView {
+		t.Error("expected transactionView=true after 't'")
 	}
 
-	// Close history with esc
+	// Close transaction view with esc
 	m, _ = app.Update(tea.KeyMsg{Type: tea.KeyEsc})
 	app = m.(App)
-	if app.historyView {
-		t.Error("expected historyView=false after esc")
+	if app.transactionView {
+		t.Error("expected transactionView=false after esc")
 	}
 }
 
@@ -351,16 +351,16 @@ func TestHelpToggle(t *testing.T) {
 		t.Error("help should start collapsed")
 	}
 
-	m, _ := a.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'?'}})
+	m, _ := a.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'h'}})
 	app := m.(App)
 	if !app.help.ShowAll {
-		t.Error("expected help.ShowAll=true after '?'")
+		t.Error("expected help.ShowAll=true after 'h'")
 	}
 
-	m, _ = app.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'?'}})
+	m, _ = app.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'h'}})
 	app = m.(App)
 	if app.help.ShowAll {
-		t.Error("expected help.ShowAll=false after second '?'")
+		t.Error("expected help.ShowAll=false after second 'h'")
 	}
 }
 
@@ -595,12 +595,12 @@ func TestAdjustFetchScroll(t *testing.T) {
 	}
 }
 
-func TestAdjustHistoryScroll(t *testing.T) {
+func TestAdjustTransactionScroll(t *testing.T) {
 	a := newTestApp()
-	a.historyIdx = 50
-	a.historyOffset = 0
-	a.adjustHistoryScroll()
-	if a.historyOffset == 0 {
-		t.Error("historyOffset should adjust when historyIdx is past viewport")
+	a.transactionIdx = 50
+	a.transactionOffset = 0
+	a.adjustTransactionScroll()
+	if a.transactionOffset == 0 {
+		t.Error("transactionOffset should adjust when transactionIdx is past viewport")
 	}
 }

@@ -4,27 +4,27 @@ package model
 import "github.com/charmbracelet/bubbles/key"
 
 type KeyMap struct {
-	Quit       key.Binding
-	Help       key.Binding
-	Enter      key.Binding
-	Back       key.Binding
-	Search     key.Binding
-	Install    key.Binding
-	Remove     key.Binding
-	Upgrade    key.Binding
-	UpgradeAll key.Binding
-	Select     key.Binding
-	SelectAll  key.Binding
-	Refresh    key.Binding
-	Up         key.Binding
-	Down       key.Binding
-	PageUp     key.Binding
-	PageDown   key.Binding
-	History    key.Binding
-	HistUndo   key.Binding
-	HistRedo   key.Binding
-	Fetch      key.Binding
-	Tab        key.Binding
+	Quit        key.Binding
+	Help        key.Binding
+	Enter       key.Binding
+	Back        key.Binding
+	Search      key.Binding
+	Install     key.Binding
+	Remove      key.Binding
+	Upgrade     key.Binding
+	UpgradeAll  key.Binding
+	Select      key.Binding
+	SelectAll   key.Binding
+	Refresh     key.Binding
+	Up          key.Binding
+	Down        key.Binding
+	PageUp      key.Binding
+	PageDown    key.Binding
+	Transaction key.Binding
+	TranUndo    key.Binding
+	TranRedo    key.Binding
+	Fetch       key.Binding
+	Tab         key.Binding
 }
 
 var Keys = KeyMap{
@@ -93,15 +93,15 @@ var Keys = KeyMap{
 		key.WithKeys("pgdown", "ctrl+d"),
 		key.WithHelp("pgdown", "page down"),
 	),
-	History: key.NewBinding(
+	Transaction: key.NewBinding(
 		key.WithKeys("t"),
 		key.WithHelp("t", "transactions"),
 	),
-	HistUndo: key.NewBinding(
+	TranUndo: key.NewBinding(
 		key.WithKeys("z"),
 		key.WithHelp("z", "undo"),
 	),
-	HistRedo: key.NewBinding(
+	TranRedo: key.NewBinding(
 		key.WithKeys("x"),
 		key.WithHelp("x", "redo"),
 	),
@@ -117,7 +117,7 @@ var Keys = KeyMap{
 }
 
 func (k KeyMap) ShortHelp() []key.Binding {
-	return []key.Binding{k.Search, k.Tab, k.Select, k.Install, k.Remove, k.History, k.Quit, k.Help}
+	return []key.Binding{k.Search, k.Tab, k.Select, k.Install, k.Remove, k.Transaction, k.Quit, k.Help}
 }
 
 func (k KeyMap) FullHelp() [][]key.Binding {
@@ -125,7 +125,7 @@ func (k KeyMap) FullHelp() [][]key.Binding {
 		{k.Up, k.Down, k.PageUp, k.PageDown},
 		{k.Enter, k.Search, k.Select, k.SelectAll},
 		{k.Install, k.Remove, k.Upgrade, k.UpgradeAll},
-		{k.History, k.HistUndo, k.HistRedo, k.Fetch, k.Refresh},
+		{k.Transaction, k.TranUndo, k.TranRedo, k.Fetch, k.Refresh},
 		{k.Tab, k.Help, k.Quit},
 	}
 }

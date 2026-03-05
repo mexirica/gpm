@@ -11,7 +11,7 @@ import (
 
 func TestRenderPackageListEmpty(t *testing.T) {
 	result := RenderPackageList(nil, 0, 0, 10, 120, nil)
-	if !strings.Contains(result, "Nenhum pacote") {
+	if !strings.Contains(result, "No packages found") {
 		t.Error("empty list should show 'no packages' message")
 	}
 }
@@ -78,7 +78,7 @@ func TestRenderPackageListOffset(t *testing.T) {
 
 func TestRenderPackageDetailEmpty(t *testing.T) {
 	result := RenderPackageDetail("", 120, 10, 1)
-	if !strings.Contains(result, "Nenhum pacote") {
+	if !strings.Contains(result, "No package selected") {
 		t.Error("empty detail should show placeholder message")
 	}
 }
@@ -142,29 +142,29 @@ func TestRenderStatusBarEmpty(t *testing.T) {
 	_ = result
 }
 
-func TestRenderHistoryListEmpty(t *testing.T) {
-	result := RenderHistoryList(nil, 0, 0, 10, 120)
+func TestRenderTransactionListEmpty(t *testing.T) {
+	result := RenderTransactionList(nil, 0, 0, 10, 120)
 	if !strings.Contains(result, "No transaction") {
-		t.Error("empty history should show 'No transaction' message")
+		t.Error("empty transaction list should show 'No transaction' message")
 	}
 }
 
-func TestRenderHistoryListWithItems(t *testing.T) {
+func TestRenderTransactionListWithItems(t *testing.T) {
 	items := []history.Transaction{
 		{ID: 1, Operation: history.OpInstall, Packages: []string{"vim"}, Success: true},
 		{ID: 2, Operation: history.OpRemove, Packages: []string{"nano"}, Success: false},
 	}
 
-	result := RenderHistoryList(items, 0, 0, 10, 120)
+	result := RenderTransactionList(items, 0, 0, 10, 120)
 	if result == "" {
-		t.Error("rendered history list should not be empty")
+		t.Error("rendered transaction list should not be empty")
 	}
 	if !strings.Contains(result, "ID") {
 		t.Error("should contain ID header")
 	}
 }
 
-func TestRenderHistoryDetail(t *testing.T) {
+func TestRenderTransactionDetail(t *testing.T) {
 	tx := history.Transaction{
 		ID:        1,
 		Operation: history.OpInstall,
@@ -172,9 +172,9 @@ func TestRenderHistoryDetail(t *testing.T) {
 		Success:   true,
 	}
 
-	result := RenderHistoryDetail(tx, 120, 10)
+	result := RenderTransactionDetail(tx, 120, 10)
 	if result == "" {
-		t.Error("history detail should not be empty")
+		t.Error("transaction detail should not be empty")
 	}
 	if !strings.Contains(result, "#1") {
 		t.Error("should contain transaction ID")
