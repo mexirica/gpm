@@ -77,7 +77,6 @@ type App struct {
 	fetchTotal    int                     // total mirrors to test
 	fetchResultCh <-chan fetch.TestResult // channel for incremental results
 
-
 	// Lazy info loading (version + size)
 	infoCache map[string]apt.PackageInfo // cached info by package name
 
@@ -1170,8 +1169,9 @@ func (a *App) adjustScroll() {
 
 // listHeight returns how many package lines fit in the upper half.
 func (a App) listHeight() int {
-	// Layout: tabBar(1) + colHeader(1) + colSep(1) + list(h) + counter(1) + search(1) + sep(1) + detail(10) + status(1) + help(1) = height
-	h := a.height - a.detailHeight() - 10
+	// Layout: tabBar(1) + colHeader(1) + colSep(1) + list(h) + counter(1) + search(1) + sep(1) + detail(10) + status(1) + help(N) = height
+	helpLines := strings.Count(a.help.View(a.keys), "\n") + 1
+	h := a.height - a.detailHeight() - 9 - helpLines
 	if h < 5 {
 		h = 5
 	}
