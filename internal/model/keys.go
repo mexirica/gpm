@@ -33,8 +33,8 @@ var Keys = KeyMap{
 		key.WithHelp("q", "quit"),
 	),
 	Help: key.NewBinding(
-		key.WithKeys("?"),
-		key.WithHelp("?", "help"),
+		key.WithKeys("h"),
+		key.WithHelp("h", "help"),
 	),
 	Enter: key.NewBinding(
 		key.WithKeys("enter"),
@@ -94,8 +94,8 @@ var Keys = KeyMap{
 		key.WithHelp("pgdown", "page down"),
 	),
 	History: key.NewBinding(
-		key.WithKeys("h"),
-		key.WithHelp("h", "history"),
+		key.WithKeys("t"),
+		key.WithHelp("t", "transactions"),
 	),
 	HistUndo: key.NewBinding(
 		key.WithKeys("z"),

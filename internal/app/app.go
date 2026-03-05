@@ -743,7 +743,7 @@ func (a App) handleKeypress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case msg.String() == "q" || msg.String() == "ctrl+c":
 		return a, tea.Quit
 
-	case msg.String() == "?":
+	case msg.String() == "h":
 		a.help.ShowAll = !a.help.ShowAll
 		return a, nil
 
@@ -964,7 +964,7 @@ func (a App) handleKeypress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		a.status = "Reloading..."
 		return a, loadAllCmd
 
-	case msg.String() == "h":
+	case msg.String() == "t":
 		a.historyView = true
 		a.historyItems = a.historyStore.All()
 		a.historyIdx = 0
@@ -1109,7 +1109,7 @@ func (a *App) adjustFetchScroll() {
 // handleHistoryKeypress handles key events when the history view is active.
 func (a App) handleHistoryKeypress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch {
-	case msg.String() == "esc" || msg.String() == "h":
+	case msg.String() == "esc" || msg.String() == "t":
 		a.historyView = false
 		a.status = fmt.Sprintf("%d packages ", len(a.filtered))
 		return a, nil
@@ -1117,7 +1117,7 @@ func (a App) handleHistoryKeypress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case msg.String() == "q" || msg.String() == "ctrl+c":
 		return a, tea.Quit
 
-	case msg.String() == "?":
+	case msg.String() == "h":
 		a.help.ShowAll = !a.help.ShowAll
 		return a, nil
 
