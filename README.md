@@ -59,9 +59,6 @@ sudo mv gpm /usr/local/bin/
 ## Usage
 
 ```bash
-### Build from source
-
-```bash
 git clone https://github.com/mexirica/gpm.git
 cd gpm
 go build -o gpm ./cmd
