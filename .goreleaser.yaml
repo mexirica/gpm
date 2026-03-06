@@ -22,8 +22,10 @@ archives:
 
 nfpms:
   - id: gpm-nfpm
-    package_name: gpm
+    package_name: gpm-tui
     vendor: mexirica
+    conflicts:
+      - gpm
     homepage: https://github.com/mexirica/gpm
     maintainer: mexirica <mexirica@users.noreply.github.com>
     description: A TUI package manager for APT-based Linux distributions.
