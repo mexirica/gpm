@@ -31,8 +31,8 @@ nfpms:
     formats:
       - deb
     contents:
-      - src: ./gpm
-        dst: /usr/bin/gpm
+      - src: ./dist/{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}/{{ .ProjectName }}
+        dst: /usr/bin/{{ .ProjectName }}
 
 changelog:
   sort: asc
