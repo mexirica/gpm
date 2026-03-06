@@ -40,12 +40,12 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GH_PAT }}
 
-      - name: Deploy APT Repo
-        uses: devadr0it/pksign-action@v1
+      - name: Deploy APT Repo to GitHub Pages
+        uses: charle85/publish-apt-repo-gh-pages@v3
         with:
-          deb_path: dist/*.deb
-          repo_owner: mexirica
-          repo_name: gpm
-          gpg_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          github_token: ${{ secrets.GH_PAT }}
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
           gpg_passphrase: ${{ secrets.GPG_PASSPHRASE }}
+          file: dist/*.deb
+          repository: stable
           branch: gh-pages
