@@ -6,10 +6,10 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/mexirica/gpm/internal/fetch"
-	"github.com/mexirica/gpm/internal/model"
-	"github.com/mexirica/gpm/internal/ui"
-	"github.com/mexirica/gpm/internal/ui/components"
+	"github.com/mexirica/aptui/internal/fetch"
+	"github.com/mexirica/aptui/internal/model"
+	"github.com/mexirica/aptui/internal/ui"
+	"github.com/mexirica/aptui/internal/ui/components"
 )
 
 func (a App) View() string {
@@ -214,8 +214,6 @@ func (a App) renderFetchView(w int) string {
 }
 
 func (a App) renderTransactionView(w int) string {
-	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(ui.ColorWhite).Background(ui.ColorPrimary).Padding(0, 2)
-	title := titleStyle.Render(" GPM Transaction History ")
 
 	var footerParts []string
 	counterStyle := lipgloss.NewStyle().Foreground(ui.ColorSecondary)
@@ -268,5 +266,5 @@ func (a App) renderTransactionView(w int) string {
 		gap = 0
 	}
 
-	return title + "\n" + panels + strings.Repeat("\n", gap) + footerView
+	return panels + strings.Repeat("\n", gap) + footerView
 }

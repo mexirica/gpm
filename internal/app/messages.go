@@ -1,9 +1,9 @@
 package app
 
 import (
-	"github.com/mexirica/gpm/internal/apt"
-	"github.com/mexirica/gpm/internal/fetch"
-	"github.com/mexirica/gpm/internal/model"
+	"github.com/mexirica/aptui/internal/apt"
+	"github.com/mexirica/aptui/internal/fetch"
+	"github.com/mexirica/aptui/internal/model"
 )
 
 type initialLoadMsg struct {

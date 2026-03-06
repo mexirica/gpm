@@ -7,7 +7,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/mexirica/gpm/internal/model"
+	"github.com/mexirica/aptui/internal/model"
 )
 
 func ListInstalled() ([]model.Package, error) {

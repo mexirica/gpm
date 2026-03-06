@@ -1,4 +1,4 @@
-module github.com/mexirica/gpm
+module github.com/mexirica/aptui
 
 go 1.26
 

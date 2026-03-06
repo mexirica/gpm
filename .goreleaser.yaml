@@ -6,8 +6,8 @@ before:
     - go generate ./...
 
 builds:
-  - id: gpm
-    binary: gpm
+  - id: aptui
+    binary: aptui
     env:
       - CGO_ENABLED=0
     goos:
@@ -21,12 +21,10 @@ archives:
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
 
 nfpms:
-  - id: gpm-nfpm
-    package_name: gpm-tui
+  - id: aptui-nfpm
+    package_name: aptui
     vendor: mexirica
-    conflicts:
-      - gpm
-    homepage: https://github.com/mexirica/gpm
+    homepage: https://github.com/mexirica/aptui
     maintainer: mexirica <mexirica@users.noreply.github.com>
     description: A TUI package manager for APT-based Linux distributions.
     license: MIT
@@ -44,4 +42,4 @@ changelog:
 release:
   github:
     owner: mexirica
-    name: gpm
+    name: aptui

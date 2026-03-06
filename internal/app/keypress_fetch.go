@@ -5,8 +5,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/mexirica/gpm/internal/fetch"
-	"github.com/mexirica/gpm/internal/ui"
+	"github.com/mexirica/aptui/internal/fetch"
+	"github.com/mexirica/aptui/internal/ui"
 )
 
 func (a App) onFetchKeypress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {

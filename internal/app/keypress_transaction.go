@@ -5,8 +5,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/mexirica/gpm/internal/history"
-	"github.com/mexirica/gpm/internal/ui"
+	"github.com/mexirica/aptui/internal/history"
+	"github.com/mexirica/aptui/internal/ui"
 )
 
 func (a App) onTransactionKeypress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {

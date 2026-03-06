@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/mexirica/gpm/internal/history"
+	"github.com/mexirica/aptui/internal/history"
 )
 
 var (

@@ -1,6 +1,6 @@
-// Package history provides transaction history storage for GPM.
+// Package history provides transaction history storage for aptui.
 // Each install, remove, or upgrade operation is recorded with a unique ID.
-// History is persisted to ~/.local/share/gpm/history.json.
+// History is persisted to ~/.local/share/aptui/history.json.
 package history
 
 import (
@@ -44,7 +44,7 @@ var historyPath = func() string {
 	if err != nil {
 		home = "/tmp"
 	}
-	return filepath.Join(home, ".local", "share", "gpm", "history.json")
+	return filepath.Join(home, ".local", "share", "aptui", "history.json")
 }
 
 func Load() *Store {

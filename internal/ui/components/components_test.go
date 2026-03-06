@@ -4,9 +4,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mexirica/gpm/internal/fetch"
-	"github.com/mexirica/gpm/internal/history"
-	"github.com/mexirica/gpm/internal/model"
+	"github.com/mexirica/aptui/internal/fetch"
+	"github.com/mexirica/aptui/internal/history"
+	"github.com/mexirica/aptui/internal/model"
 )
 
 func TestRenderPackageListEmpty(t *testing.T) {

@@ -5,14 +5,14 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/mexirica/gpm/internal/fetch"
-	"github.com/mexirica/gpm/internal/ui"
+	"github.com/mexirica/aptui/internal/fetch"
+	"github.com/mexirica/aptui/internal/ui"
 )
 
 // RenderFetchHeader renders the fetch view title.
 func RenderFetchHeader(distro fetch.Distro) string {
 	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(ui.ColorWhite).Background(ui.ColorPrimary).Padding(0, 2)
-	return titleStyle.Render(fmt.Sprintf(" GPM Fetch Mirrors — %s (%s) ", distro.Name, distro.Codename))
+	return titleStyle.Render(fmt.Sprintf(" Fetch Mirrors — %s (%s) ", distro.Name, distro.Codename))
 }
 
 // RenderFetchProgress renders the mirror testing progress bar.
@@ -35,10 +35,10 @@ func RenderMirrorList(mirrors []fetch.Mirror, selectedIdx, offset, maxLines, wid
 		return "  No mirrors found."
 	}
 
-	prefixW := 5 
-	rankW := 5     
-	statusW := 8   
-	latencyW := 12 
+	prefixW := 5
+	rankW := 5
+	statusW := 8
+	latencyW := 12
 	urlW := width - prefixW - rankW - statusW - latencyW - 2
 	if urlW < 20 {
 		urlW = 20

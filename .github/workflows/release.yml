@@ -51,7 +51,7 @@ jobs:
           
           cd dists/stable
           echo "Origin: mexirica" > Release
-          echo "Label: gpm" >> Release
+          echo "Label: aptui" >> Release
           echo "Suite: stable" >> Release
           echo "Codename: stable" >> Release
           echo "Architectures: amd64 arm64" >> Release

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/mexirica/gpm/internal/model"
+	"github.com/mexirica/aptui/internal/model"
 )
 
 const (

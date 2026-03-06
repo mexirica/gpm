@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/mexirica/gpm/internal/app"
+	"github.com/mexirica/aptui/internal/app"
 	"os"
 
 	tea "github.com/charmbracelet/bubbletea"

@@ -7,11 +7,11 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/mexirica/gpm/internal/apt"
-	"github.com/mexirica/gpm/internal/fetch"
-	"github.com/mexirica/gpm/internal/history"
-	"github.com/mexirica/gpm/internal/model"
-	"github.com/mexirica/gpm/internal/ui"
+	"github.com/mexirica/aptui/internal/apt"
+	"github.com/mexirica/aptui/internal/fetch"
+	"github.com/mexirica/aptui/internal/history"
+	"github.com/mexirica/aptui/internal/model"
+	"github.com/mexirica/aptui/internal/ui"
 )
 
 type tabKind int

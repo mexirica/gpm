@@ -3,7 +3,7 @@ package apt
 import (
 	"testing"
 
-	"github.com/mexirica/gpm/internal/model"
+	"github.com/mexirica/aptui/internal/model"
 )
 
 func TestFormatSize(t *testing.T) {

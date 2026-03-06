@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/mexirica/gpm/internal/model"
+	"github.com/mexirica/aptui/internal/model"
 )
 
 func newTestApp() App {

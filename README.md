@@ -1,6 +1,6 @@
 <p align= "center"> <img src="assets/logo.png" alt="Logo" width="120" /> </p>
 
-GPM is a terminal user interface (TUI) written in Go for managing APT packages. Browse, search, install, remove and upgrade packages — all without leaving the terminal.
+APTUI is a terminal user interface (TUI) written in Go for managing APT packages. Browse, search, install, remove and upgrade packages — all without leaving the terminal.
 
 Built with [Bubble Tea](https://github.com/charmbracelet/bubbletea), [Lip Gloss](https://github.com/charmbracelet/lipgloss) and [Bubbles](https://github.com/charmbracelet/bubbles).
 
@@ -31,30 +31,30 @@ Built with [Bubble Tea](https://github.com/charmbracelet/bubbletea), [Lip Gloss]
 ### APT (Debian/Ubuntu)
 
 ```bash
-curl -fsSL https://mexirica.github.io/gpm/public-key.gpg | sudo gpg --dearmor -o /usr/share/keyrings/gpm-archive-keyring.gpg
-echo "deb [signed-by=/usr/share/keyrings/gpm-archive-keyring.gpg] https://mexirica.github.io/gpm/ stable main" | sudo tee /etc/apt/sources.list.d/gpm.list
-sudo apt update && sudo apt install gpm-tui
+curl -fsSL https://mexirica.github.io/aptui/public-key.gpg | sudo gpg --dearmor -o /usr/share/keyrings/aptui-archive-keyring.gpg
+echo "deb [signed-by=/usr/share/keyrings/aptui-archive-keyring.gpg] https://mexirica.github.io/aptui/ stable main" | sudo tee /etc/apt/sources.list.d/aptui.list
+sudo apt update && sudo apt install aptui
 ```
 
 ### Go
 
 ```bash
-go install github.com/mexirica/gpm@latest
+go install github.com/mexirica/aptui@latest
 ```
 
 ### Build from source
 
 ```bash
-git clone https://github.com/mexirica/gpm.git
-cd gpm
-go build -o gpm .
-sudo mv gpm /usr/local/bin/
+git clone https://github.com/mexirica/aptui.git
+cd aptui
+go build -o aptui .
+sudo mv aptui /usr/local/bin/
 ```
 
 ## Usage
 
 ```bash
-gpm
+aptui
 ```
 
 > Some operations (install, remove, upgrade, apply mirrors) require `sudo`.
