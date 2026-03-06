@@ -70,8 +70,6 @@ func RemoveCmd(name string) *exec.Cmd {
 	return c
 }
 
-// ListAllNames returns all available package names from the apt cache.
-// This uses 'apt-cache pkgnames' which is fast (~70k names in <1s).
 func ListAllNames() ([]string, error) {
 	cmd := exec.Command("apt-cache", "pkgnames")
 	var out bytes.Buffer
@@ -102,15 +100,11 @@ func IsInstalled(name string) bool {
 	return strings.Contains(out.String(), "install ok installed")
 }
 
-// PackageInfo holds version and formatted size for a package.
 type PackageInfo struct {
 	Version string
 	Size    string
 }
 
-// BatchGetInfo uses 'apt-cache show --no-all-versions' to get version and
-// installed-size for a batch of package names. It splits work into chunks
-// and runs them in parallel. Returns a map of name → PackageInfo.
 func BatchGetInfo(names []string) map[string]PackageInfo {
 	if len(names) == 0 {
 		return nil
@@ -226,7 +220,6 @@ func ParseShowEntry(info string) PackageInfo {
 }
 
 // GetDependencies returns the direct dependency package names for a given package.
-// It uses "apt-cache depends" and parses lines like "  Depends: libfoo".
 func GetDependencies(name string) ([]string, error) {
 	cmd := exec.Command("apt-cache", "depends", "--no-recommends", "--no-suggests",
 		"--no-conflicts", "--no-breaks", "--no-replaces", "--no-enhances", name)

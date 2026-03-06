@@ -8,7 +8,7 @@ import (
 	"github.com/mexirica/gpm/internal/model"
 )
 
-func loadFastCmd() tea.Msg {
+func loadInstalledAndUpgradable() tea.Msg {
 	type result struct {
 		pkgs []model.Package
 		err  error
@@ -29,19 +29,19 @@ func loadFastCmd() tea.Msg {
 	ur := <-upgradableCh
 
 	if ir.err != nil {
-		return fastLoadMsg{err: ir.err}
+		return initialLoadMsg{err: ir.err}
 	}
-	return fastLoadMsg{installed: ir.pkgs, upgradable: ur.pkgs}
+	return initialLoadMsg{installed: ir.pkgs, upgradable: ur.pkgs}
 }
 
-func loadAllNamesCmd() tea.Cmd {
+func loadAllPackageNamesCmd() tea.Cmd {
 	return func() tea.Msg {
 		names, err := apt.ListAllNames()
 		return allNamesMsg{names: names, err: err}
 	}
 }
 
-func loadAllCmd() tea.Msg {
+func reloadAllPackages() tea.Msg {
 	type namesResult struct {
 		names []string
 		err   error
@@ -82,21 +82,21 @@ func loadAllCmd() tea.Msg {
 	return allPackagesMsg{allNames, ir.pkgs, ur.pkgs, nil}
 }
 
-func searchCmd(query string) tea.Cmd {
+func searchPackagesCmd(query string) tea.Cmd {
 	return func() tea.Msg {
 		pkgs, err := apt.SearchPackages(query)
 		return searchResultMsg{pkgs, err}
 	}
 }
 
-func showDetailCmd(name string) tea.Cmd {
+func showPackageDetailCmd(name string) tea.Cmd {
 	return func() tea.Msg {
 		info, err := apt.ShowPackage(name)
 		return detailLoadedMsg{name, info, err}
 	}
 }
 
-func loadTxDepsCmd(txIdx int, packages []string) tea.Cmd {
+func loadTransactionDepsCmd(txIdx int, packages []string) tea.Cmd {
 	return func() tea.Msg {
 		seen := make(map[string]bool)
 		for _, pkg := range packages {
@@ -119,34 +119,34 @@ func loadTxDepsCmd(txIdx int, packages []string) tea.Cmd {
 	}
 }
 
-func installCmd(name string) tea.Cmd {
+func installPackageCmd(name string) tea.Cmd {
 	cmd := apt.ParallelInstallCmd(name)
 	return tea.ExecProcess(cmd, func(err error) tea.Msg {
 		return execFinishedMsg{op: "install", name: name, err: err}
 	})
 }
 
-func removeCmd(name string) tea.Cmd {
+func removePackageCmd(name string) tea.Cmd {
 	return tea.ExecProcess(apt.RemoveCmd(name), func(err error) tea.Msg {
 		return execFinishedMsg{op: "remove", name: name, err: err}
 	})
 }
 
-func upgradeCmd(name string) tea.Cmd {
+func upgradePackageCmd(name string) tea.Cmd {
 	cmd := apt.ParallelUpgradeCmd(name)
 	return tea.ExecProcess(cmd, func(err error) tea.Msg {
 		return execFinishedMsg{op: "upgrade", name: name, err: err}
 	})
 }
 
-func upgradeAllCmd() tea.Cmd {
+func upgradeAllPackagesCmd() tea.Cmd {
 	cmd := apt.ParallelUpgradeAllCmd()
 	return tea.ExecProcess(cmd, func(err error) tea.Msg {
 		return execFinishedMsg{op: "upgrade-all", name: "all", err: err}
 	})
 }
 
-func fetchMirrorsCmd() tea.Cmd {
+func fetchMirrorListCmd() tea.Cmd {
 	return func() tea.Msg {
 		distro, err := fetch.DetectDistro()
 		if err != nil {
@@ -160,7 +160,7 @@ func fetchMirrorsCmd() tea.Cmd {
 	}
 }
 
-func waitForFetchResult(ch <-chan fetch.TestResult) tea.Cmd {
+func awaitMirrorTestResult(ch <-chan fetch.TestResult) tea.Cmd {
 	return func() tea.Msg {
 		r, ok := <-ch
 		if !ok {

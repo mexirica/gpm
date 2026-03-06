@@ -22,6 +22,8 @@ const (
 	tabUpgradable
 )
 
+// App is the main Bubbletea model. It manages three views:
+// the package list (default), the transaction history, and the mirror selector.
 type App struct {
 	allPackages   []model.Package
 	filtered      []model.Package
@@ -90,10 +92,10 @@ func New() App {
 	h := help.New()
 	h.Styles.ShortKey = lipgloss.NewStyle().Foreground(ui.ColorPrimary).Bold(true)
 	h.Styles.FullKey = lipgloss.NewStyle().Foreground(ui.ColorPrimary).Bold(true)
-	h.Styles.ShortDesc = lipgloss.NewStyle().Foreground(lipgloss.Color("#A78BFA"))
-	h.Styles.FullDesc = lipgloss.NewStyle().Foreground(lipgloss.Color("#A78BFA"))
-	h.Styles.ShortSeparator = lipgloss.NewStyle().Foreground(lipgloss.Color("#5B3FC4"))
-	h.Styles.FullSeparator = lipgloss.NewStyle().Foreground(lipgloss.Color("#5B3FC4"))
+	h.Styles.ShortDesc = lipgloss.NewStyle().Foreground(lipgloss.Color("#B0B0C0"))
+	h.Styles.FullDesc = lipgloss.NewStyle().Foreground(lipgloss.Color("#B0B0C0"))
+	h.Styles.ShortSeparator = lipgloss.NewStyle().Foreground(lipgloss.Color("#555555"))
+	h.Styles.FullSeparator = lipgloss.NewStyle().Foreground(lipgloss.Color("#555555"))
 
 	return App{
 		upgradableMap:    make(map[string]model.Package),
@@ -110,5 +112,5 @@ func New() App {
 }
 
 func (a App) Init() tea.Cmd {
-	return tea.Batch(a.spinner.Tick, loadFastCmd)
+	return tea.Batch(a.spinner.Tick, loadInstalledAndUpgradable)
 }

@@ -6,7 +6,7 @@ import (
 	"github.com/mexirica/gpm/internal/model"
 )
 
-type fastLoadMsg struct {
+type initialLoadMsg struct {
 	installed  []model.Package
 	upgradable []model.Package
 	err        error

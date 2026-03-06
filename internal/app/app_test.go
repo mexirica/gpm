@@ -133,7 +133,7 @@ func TestApplyFilterResetsSelection(t *testing.T) {
 
 func TestListHeight(t *testing.T) {
 	a := newTestApp()
-	h := a.listHeight()
+	h := a.packageListHeight()
 	if h < 5 {
 		t.Errorf("listHeight should be at least 5, got %d", h)
 	}
@@ -141,8 +141,8 @@ func TestListHeight(t *testing.T) {
 
 func TestDetailHeight(t *testing.T) {
 	a := newTestApp()
-	if a.detailHeight() != 10 {
-		t.Errorf("expected detailHeight=10, got %d", a.detailHeight())
+	if a.packageDetailHeight() != 10 {
+		t.Errorf("expected detailHeight=10, got %d", a.packageDetailHeight())
 	}
 }
 
@@ -154,14 +154,14 @@ func TestAdjustScroll(t *testing.T) {
 	// Scroll down past viewport
 	a.selectedIdx = 50
 	a.scrollOffset = 0
-	a.adjustScroll()
+	a.adjustPackageScroll()
 	if a.scrollOffset == 0 {
 		t.Error("scrollOffset should have been adjusted for selectedIdx=50")
 	}
 
 	// Scroll back up
 	a.selectedIdx = 0
-	a.adjustScroll()
+	a.adjustPackageScroll()
 	if a.scrollOffset != 0 {
 		t.Errorf("scrollOffset should be 0 when selectedIdx=0, got %d", a.scrollOffset)
 	}
@@ -417,10 +417,10 @@ func TestAllPackagesMsg(t *testing.T) {
 	}
 }
 
-func TestFastLoadMsg(t *testing.T) {
+func TestInitialLoadMsg(t *testing.T) {
 	a := newTestApp()
 
-	msg := fastLoadMsg{
+	msg := initialLoadMsg{
 		installed:  []model.Package{{Name: "vim", Installed: true, Version: "8.2"}},
 		upgradable: []model.Package{{Name: "vim", Installed: true, Upgradable: true, NewVersion: "9.0"}},
 		err:        nil,
@@ -430,7 +430,7 @@ func TestFastLoadMsg(t *testing.T) {
 	app := m.(App)
 
 	if app.loading {
-		t.Error("loading should be false after fastLoadMsg")
+		t.Error("loading should be false after initialLoadMsg")
 	}
 	if len(app.allPackages) != 1 {
 		t.Errorf("expected 1 package (installed only), got %d", len(app.allPackages))
@@ -439,17 +439,17 @@ func TestFastLoadMsg(t *testing.T) {
 		t.Errorf("expected installedCount=1, got %d", app.installedCount)
 	}
 	if app.allNamesLoaded {
-		t.Error("allNamesLoaded should be false after fastLoadMsg")
+		t.Error("allNamesLoaded should be false after initialLoadMsg")
 	}
 	if len(app.upgradableMap) != 1 {
 		t.Errorf("expected 1 upgradable, got %d", len(app.upgradableMap))
 	}
 }
 
-func TestFastLoadMsgError(t *testing.T) {
+func TestInitialLoadMsgError(t *testing.T) {
 	a := newTestApp()
 
-	msg := fastLoadMsg{err: fmt.Errorf("test error")}
+	msg := initialLoadMsg{err: fmt.Errorf("test error")}
 
 	m, _ := a.Update(msg)
 	app := m.(App)
@@ -589,7 +589,7 @@ func TestAdjustFetchScroll(t *testing.T) {
 	a := newTestApp()
 	a.fetchIdx = 50
 	a.fetchOffset = 0
-	a.adjustFetchScroll()
+	a.adjustMirrorScroll()
 	if a.fetchOffset == 0 {
 		t.Error("fetchOffset should adjust when fetchIdx is past viewport")
 	}

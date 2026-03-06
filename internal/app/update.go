@@ -27,56 +27,58 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.spinner, cmd = a.spinner.Update(msg)
 		return a, cmd
 
-	case fastLoadMsg:
-		return a.handleFastLoad(msg)
+	case initialLoadMsg:
+		return a.onInitialLoad(msg)
 
 	case allNamesMsg:
-		return a.handleAllNames(msg)
+		return a.onAllNamesLoaded(msg)
 
 	case allPackagesMsg:
-		return a.handleAllPackages(msg)
+		return a.onAllPackagesLoaded(msg)
 
 	case infoLoadedMsg:
-		return a.handleInfoLoaded(msg)
+		return a.onPackageInfoLoaded(msg)
 
 	case searchResultMsg:
-		return a.handleSearchResult(msg)
+		return a.onSearchResultLoaded(msg)
 
 	case detailLoadedMsg:
-		return a.handleDetailLoaded(msg)
+		return a.onPackageDetailLoaded(msg)
 
 	case execFinishedMsg:
-		return a.handleExecFinished(msg)
+		return a.onExecFinished(msg)
 
 	case depsLoadedMsg:
-		return a.handleDepsLoaded(msg)
+		return a.onDepsLoaded(msg)
 
 	case fetchMirrorsMsg:
-		return a.handleFetchMirrors(msg)
+		return a.onMirrorListLoaded(msg)
 
 	case fetchTestResultMsg:
-		return a.handleFetchTestResult(msg)
+		return a.onMirrorTestResult(msg)
 
 	case fetchApplyMsg:
-		return a.handleFetchApply(msg)
+		return a.onMirrorApplyResult(msg)
 
 	case tea.KeyMsg:
 		if a.fetchView {
-			return a.handleFetchKeypress(msg)
+			return a.onFetchKeypress(msg)
 		}
 		if a.transactionView {
-			return a.handleTransactionKeypress(msg)
+			return a.onTransactionKeypress(msg)
 		}
 		if a.searching {
-			return a.handleSearchInput(msg)
+			return a.onSearchKeypress(msg)
 		}
-		return a.handleKeypress(msg)
+		return a.onKeypress(msg)
 	}
 
 	return a, nil
 }
 
-func (a App) handleFastLoad(msg fastLoadMsg) (tea.Model, tea.Cmd) {
+// onInitialLoad handles the first load (installed + upgradable only).
+// After processing, it kicks off loadAllPackageNamesCmd to populate the full list.
+func (a App) onInitialLoad(msg initialLoadMsg) (tea.Model, tea.Cmd) {
 	a.loading = false
 	if msg.err != nil {
 		a.status = ui.ErrorStyle.Render(fmt.Sprintf("Error: %v", msg.err))
@@ -102,14 +104,14 @@ func (a App) handleFastLoad(msg fastLoadMsg) (tea.Model, tea.Cmd) {
 		a.installedCount, upgCount)
 	var cmds []tea.Cmd
 	if len(a.filtered) > 0 {
-		cmds = append(cmds, showDetailCmd(a.filtered[0].Name))
+		cmds = append(cmds, showPackageDetailCmd(a.filtered[0].Name))
 	}
-	cmds = append(cmds, a.loadVisibleVersionsCmd())
-	cmds = append(cmds, loadAllNamesCmd())
+	cmds = append(cmds, a.preloadVisiblePackageInfo())
+	cmds = append(cmds, loadAllPackageNamesCmd())
 	return a, tea.Batch(cmds...)
 }
 
-func (a App) handleAllNames(msg allNamesMsg) (tea.Model, tea.Cmd) {
+func (a App) onAllNamesLoaded(msg allNamesMsg) (tea.Model, tea.Cmd) {
 	if msg.err != nil {
 		a.allNamesLoaded = true
 		a.status = fmt.Sprintf("%d installed (%d upgradable) ",
@@ -145,10 +147,10 @@ func (a App) handleAllNames(msg allNamesMsg) (tea.Model, tea.Cmd) {
 	}
 	a.status = fmt.Sprintf("%d packages (%d installed, %d upgradable) ",
 		len(a.allPackages), a.installedCount, len(a.upgradableMap))
-	return a, tea.Batch(a.loadVisibleVersionsCmd())
+	return a, tea.Batch(a.preloadVisiblePackageInfo())
 }
 
-func (a App) handleAllPackages(msg allPackagesMsg) (tea.Model, tea.Cmd) {
+func (a App) onAllPackagesLoaded(msg allPackagesMsg) (tea.Model, tea.Cmd) {
 	a.loading = false
 	if msg.err != nil {
 		a.status = ui.ErrorStyle.Render(fmt.Sprintf("Error: %v", msg.err))
@@ -188,13 +190,13 @@ func (a App) handleAllPackages(msg allPackagesMsg) (tea.Model, tea.Cmd) {
 		len(a.allPackages), a.installedCount, upgCount)
 	var cmds []tea.Cmd
 	if len(a.filtered) > 0 {
-		cmds = append(cmds, showDetailCmd(a.filtered[0].Name))
+		cmds = append(cmds, showPackageDetailCmd(a.filtered[0].Name))
 	}
-	cmds = append(cmds, a.loadVisibleVersionsCmd())
+	cmds = append(cmds, a.preloadVisiblePackageInfo())
 	return a, tea.Batch(cmds...)
 }
 
-func (a App) handleInfoLoaded(msg infoLoadedMsg) (tea.Model, tea.Cmd) {
+func (a App) onPackageInfoLoaded(msg infoLoadedMsg) (tea.Model, tea.Cmd) {
 	for name, info := range msg.info {
 		a.infoCache[name] = info
 	}
@@ -221,7 +223,7 @@ func (a App) handleInfoLoaded(msg infoLoadedMsg) (tea.Model, tea.Cmd) {
 	return a, nil
 }
 
-func (a App) handleSearchResult(msg searchResultMsg) (tea.Model, tea.Cmd) {
+func (a App) onSearchResultLoaded(msg searchResultMsg) (tea.Model, tea.Cmd) {
 	a.loading = false
 	if msg.err != nil {
 		a.status = ui.ErrorStyle.Render(fmt.Sprintf("Error in search: %v", msg.err))
@@ -251,14 +253,14 @@ func (a App) handleSearchResult(msg searchResultMsg) (tea.Model, tea.Cmd) {
 	a.scrollOffset = 0
 	a.status = fmt.Sprintf("%d results for '%s'", len(msg.pkgs), a.filterQuery)
 	if len(a.filtered) > 0 {
-		return a, tea.Batch(showDetailCmd(a.filtered[0].Name), a.loadVisibleVersionsCmd())
+		return a, tea.Batch(showPackageDetailCmd(a.filtered[0].Name), a.preloadVisiblePackageInfo())
 	}
 	a.detailInfo = ""
 	a.detailName = ""
 	return a, nil
 }
 
-func (a App) handleDetailLoaded(msg detailLoadedMsg) (tea.Model, tea.Cmd) {
+func (a App) onPackageDetailLoaded(msg detailLoadedMsg) (tea.Model, tea.Cmd) {
 	if msg.err != nil {
 		a.detailInfo = fmt.Sprintf("Error: %v", msg.err)
 	} else {
@@ -294,7 +296,7 @@ func (a App) handleDetailLoaded(msg detailLoadedMsg) (tea.Model, tea.Cmd) {
 	return a, nil
 }
 
-func (a App) handleExecFinished(msg execFinishedMsg) (tea.Model, tea.Cmd) {
+func (a App) onExecFinished(msg execFinishedMsg) (tea.Model, tea.Cmd) {
 	if msg.err != nil {
 		a.pendingExecFailed = true
 	}
@@ -320,17 +322,17 @@ func (a App) handleExecFinished(msg execFinishedMsg) (tea.Model, tea.Cmd) {
 	} else {
 		a.status = ui.SuccessStyle.Render(fmt.Sprintf("✔ %s %s completed!", msg.op, msg.name))
 	}
-	return a, loadAllCmd
+	return a, reloadAllPackages
 }
 
-func (a App) handleDepsLoaded(msg depsLoadedMsg) (tea.Model, tea.Cmd) {
+func (a App) onDepsLoaded(msg depsLoadedMsg) (tea.Model, tea.Cmd) {
 	if msg.txIdx == a.transactionIdx {
 		a.transactionDeps = msg.deps
 	}
 	return a, nil
 }
 
-func (a App) handleFetchMirrors(msg fetchMirrorsMsg) (tea.Model, tea.Cmd) {
+func (a App) onMirrorListLoaded(msg fetchMirrorsMsg) (tea.Model, tea.Cmd) {
 	if msg.err != nil {
 		a.fetchView = false
 		a.loading = false
@@ -344,10 +346,10 @@ func (a App) handleFetchMirrors(msg fetchMirrorsMsg) (tea.Model, tea.Cmd) {
 	a.fetchTotal = len(a.fetchMirrors)
 	a.status = fmt.Sprintf("Testing %d mirrors for %s...", a.fetchTotal, msg.distro.Name)
 	a.fetchResultCh = fetch.TestMirrorsChan(a.fetchMirrors)
-	return a, tea.Batch(a.spinner.Tick, waitForFetchResult(a.fetchResultCh))
+	return a, tea.Batch(a.spinner.Tick, awaitMirrorTestResult(a.fetchResultCh))
 }
 
-func (a App) handleFetchTestResult(msg fetchTestResultMsg) (tea.Model, tea.Cmd) {
+func (a App) onMirrorTestResult(msg fetchTestResultMsg) (tea.Model, tea.Cmd) {
 	if msg.done {
 		a.fetchTesting = false
 		a.loading = false
@@ -376,10 +378,10 @@ func (a App) handleFetchTestResult(msg fetchTestResultMsg) (tea.Model, tea.Cmd) 
 	}
 	a.fetchTested++
 	a.status = fmt.Sprintf("Testing mirrors... %d/%d", a.fetchTested, a.fetchTotal)
-	return a, waitForFetchResult(a.fetchResultCh)
+	return a, awaitMirrorTestResult(a.fetchResultCh)
 }
 
-func (a App) handleFetchApply(msg fetchApplyMsg) (tea.Model, tea.Cmd) {
+func (a App) onMirrorApplyResult(msg fetchApplyMsg) (tea.Model, tea.Cmd) {
 	if msg.err != nil {
 		a.status = ui.ErrorStyle.Render(fmt.Sprintf("Error writing mirrors: %v", msg.err))
 	} else {

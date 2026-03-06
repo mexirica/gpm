@@ -122,10 +122,9 @@ func (k KeyMap) ShortHelp() []key.Binding {
 
 func (k KeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
-		{k.Up, k.Down, k.PageUp, k.PageDown},
-		{k.Enter, k.Search, k.Select, k.SelectAll},
-		{k.Install, k.Remove, k.Upgrade, k.UpgradeAll},
-		{k.Transaction, k.TranUndo, k.TranRedo, k.Fetch, k.Refresh},
-		{k.Tab, k.Help, k.Quit},
+		{k.Up, k.Down, k.PageUp, k.PageDown, k.Tab},
+		{k.Enter, k.Search, k.Select, k.SelectAll, k.Refresh},
+		{k.Install, k.Remove, k.Upgrade, k.UpgradeAll, k.Fetch},
+		{k.Transaction, k.TranUndo, k.TranRedo, k.Help, k.Quit},
 	}
 }

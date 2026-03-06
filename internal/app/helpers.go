@@ -16,6 +16,8 @@ type scoredPackage struct {
 	score int
 }
 
+// applyFilter rebuilds the filtered list from allPackages based on active tab and search query.
+// Uses fuzzy scoring when a search query is active.
 func (a *App) applyFilter() {
 	var source []model.Package
 	switch a.activeTab {
@@ -72,11 +74,13 @@ func (a *App) applyFilter() {
 	a.scrollOffset = 0
 }
 
-func (a *App) loadVisibleVersionsCmd() tea.Cmd {
+// preloadVisiblePackageInfo fetches version/size info for packages near the visible
+// viewport (±20/+50 rows) that aren't already cached.
+func (a *App) preloadVisiblePackageInfo() tea.Cmd {
 	if len(a.filtered) == 0 {
 		return nil
 	}
-	h := a.listHeight()
+	h := a.packageListHeight()
 	start := a.scrollOffset
 	end := start + h + 50
 	if start > 20 {
@@ -103,8 +107,8 @@ func (a *App) loadVisibleVersionsCmd() tea.Cmd {
 	}
 }
 
-func (a *App) adjustScroll() {
-	h := a.listHeight()
+func (a *App) adjustPackageScroll() {
+	h := a.packageListHeight()
 	if a.selectedIdx < a.scrollOffset {
 		a.scrollOffset = a.selectedIdx
 	}
@@ -113,8 +117,8 @@ func (a *App) adjustScroll() {
 	}
 }
 
-func (a *App) adjustFetchScroll() {
-	h := a.listHeight()
+func (a *App) adjustMirrorScroll() {
+	h := a.packageListHeight()
 	if a.fetchIdx < a.fetchOffset {
 		a.fetchOffset = a.fetchIdx
 	}
@@ -124,7 +128,7 @@ func (a *App) adjustFetchScroll() {
 }
 
 func (a *App) adjustTransactionScroll() {
-	h := a.txListHeight()
+	h := a.transactionListHeight()
 	if a.transactionIdx < a.transactionOffset {
 		a.transactionOffset = a.transactionIdx
 	}
@@ -133,20 +137,20 @@ func (a *App) adjustTransactionScroll() {
 	}
 }
 
-func (a App) listHeight() int {
+func (a App) packageListHeight() int {
 	helpLines := strings.Count(a.help.View(a.keys), "\n") + 1
-	h := a.height - a.detailHeight() - 9 - helpLines
+	h := a.height - a.packageDetailHeight() - 9 - helpLines
 	if h < 5 {
 		h = 5
 	}
 	return h
 }
 
-func (a App) detailHeight() int {
+func (a App) packageDetailHeight() int {
 	return 10
 }
 
-func (a App) txListHeight() int {
+func (a App) transactionListHeight() int {
 	helpLines := strings.Count(a.help.View(a.keys), "\n") + 1
 	footerLines := 2 + helpLines
 	innerH := a.height - 3 - footerLines

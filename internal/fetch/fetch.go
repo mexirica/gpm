@@ -20,11 +20,10 @@ type Mirror struct {
 	Country string
 	Latency time.Duration
 	Status  string // "ok", "slow", "error"
-	Score   int    // higher is better
-	Active  bool   // selected by user
+	Score   int    
+	Active  bool 
 }
 
-// Distro holds the detected distribution info.
 type Distro struct {
 	ID       string // e.g. "ubuntu", "debian", "pop"
 	Codename string // e.g. "noble", "bookworm"
@@ -216,7 +215,6 @@ func defaultDebianMirrors() []Mirror {
 	return mirrors
 }
 
-// TestResult is sent for each mirror as it completes testing.
 type TestResult struct {
 	Index   int
 	Latency time.Duration
@@ -239,8 +237,6 @@ func LimitMirrors(mirrors []Mirror, max int) []Mirror {
 	return limited
 }
 
-// TestMirrorsChan starts testing mirrors concurrently and returns a channel
-// that delivers one TestResult per mirror. The channel is closed when all tests finish.
 func TestMirrorsChan(mirrors []Mirror) <-chan TestResult {
 	ch := make(chan TestResult, 30)
 	go func() {

@@ -31,20 +31,15 @@ Built with [Bubble Tea](https://github.com/charmbracelet/bubbletea), [Lip Gloss]
 ### APT (Debian/Ubuntu)
 
 ```bash
-# 1. Add the repository public key
 curl -fsSL https://mexirica.github.io/gpm/public-key.gpg | sudo gpg --dearmor -o /usr/share/keyrings/gpm-archive-keyring.gpg
-
-# 2. Add the APT repository
 echo "deb [signed-by=/usr/share/keyrings/gpm-archive-keyring.gpg] https://mexirica.github.io/gpm/ stable main" | sudo tee /etc/apt/sources.list.d/gpm.list
-
-# 3. Update and install
 sudo apt update && sudo apt install gpm
 ```
 
 ### Go
 
 ```bash
-go install github.com/mexirica/gpm/cmd@latest
+go install github.com/mexirica/gpm@latest
 ```
 
 ### Build from source
@@ -52,16 +47,7 @@ go install github.com/mexirica/gpm/cmd@latest
 ```bash
 git clone https://github.com/mexirica/gpm.git
 cd gpm
-go build -o gpm ./cmd
-sudo mv gpm /usr/local/bin/
-```
-
-## Usage
-
-```bash
-git clone https://github.com/mexirica/gpm.git
-cd gpm
-go build -o gpm ./cmd
+go build -o gpm .
 sudo mv gpm /usr/local/bin/
 ```
 
@@ -114,7 +100,7 @@ gpm
 
 | Key | Action |
 |---|---|
-| `h` | Open transaction history |
+| `t` | Open transaction history |
 | `z` | Undo selected transaction |
 | `x` | Redo selected transaction |
 | `f` | Fetch and test mirrors |
@@ -123,7 +109,7 @@ gpm
 
 | Key | Action |
 |---|---|
-| `?` | Toggle full help |
+| `h` | Toggle full help |
 | `q` / `ctrl+c` | Quit |
 
 ## License

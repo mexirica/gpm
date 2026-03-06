@@ -32,7 +32,7 @@ func (a App) View() string {
 	if a.loading {
 		listView = fmt.Sprintf("\n  %s Loading...\n", a.spinner.View())
 	} else {
-		listView = components.RenderPackageList(a.filtered, a.selectedIdx, a.scrollOffset, a.listHeight(), w, a.selected)
+		listView = components.RenderPackageList(a.filtered, a.selectedIdx, a.scrollOffset, a.packageListHeight(), w, a.selected)
 	}
 	listView = tabBar + "\n" + listView
 
@@ -64,7 +64,7 @@ func (a App) View() string {
 			statusLine = "Status: Installed"
 		}
 		enrichedInfo := statusLine + "\n" + a.detailInfo
-		maxDetailLines := a.detailHeight()
+		maxDetailLines := a.packageDetailHeight()
 		detail := components.RenderPackageDetail(enrichedInfo, w, maxDetailLines, 1)
 		footer = append(footer, detail)
 	} else if !a.loading && len(a.filtered) > 0 {
@@ -200,7 +200,7 @@ func (a App) renderFetchView(w int) string {
 			upperView += strings.Repeat("\n", rem)
 		}
 	} else {
-		listView := components.RenderMirrorList(a.fetchMirrors, a.fetchIdx, a.fetchOffset, a.listHeight(), w, a.fetchSelected)
+		listView := components.RenderMirrorList(a.fetchMirrors, a.fetchIdx, a.fetchOffset, a.packageListHeight(), w, a.fetchSelected)
 		upperView = header + "\n" + listView
 	}
 

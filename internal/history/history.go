@@ -13,7 +13,6 @@ import (
 	"time"
 )
 
-// Operation represents the type of package operation.
 type Operation string
 
 const (
@@ -23,7 +22,6 @@ const (
 	OpUpgradeAll Operation = "upgrade-all"
 )
 
-// Transaction represents a single recorded operation.
 type Transaction struct {
 	ID        int       `json:"id"`
 	Operation Operation `json:"operation"`
@@ -32,7 +30,6 @@ type Transaction struct {
 	Success   bool      `json:"success"`
 }
 
-// Store manages the history file.
 type Store struct {
 	mu           sync.Mutex
 	Transactions []Transaction `json:"transactions"`
@@ -50,7 +47,6 @@ var historyPath = func() string {
 	return filepath.Join(home, ".local", "share", "gpm", "history.json")
 }
 
-// Load reads the history from disk (or returns an empty store).
 func Load() *Store {
 	p := historyPath()
 	s := &Store{path: p, NextID: 1}
@@ -67,7 +63,6 @@ func Load() *Store {
 	return s
 }
 
-// save writes the store to disk.
 func (s *Store) save() error {
 	dir := filepath.Dir(s.path)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
@@ -80,7 +75,6 @@ func (s *Store) save() error {
 	return os.WriteFile(s.path, data, 0o644)
 }
 
-// Record adds a new transaction and persists it.
 func (s *Store) Record(op Operation, packages []string, success bool) Transaction {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -98,7 +92,6 @@ func (s *Store) Record(op Operation, packages []string, success bool) Transactio
 	return t
 }
 
-// All returns all transactions sorted by ID descending (newest first).
 func (s *Store) All() []Transaction {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -111,7 +104,6 @@ func (s *Store) All() []Transaction {
 	return out
 }
 
-// Get returns a transaction by ID.
 func (s *Store) Get(id int) (Transaction, bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -124,8 +116,6 @@ func (s *Store) Get(id int) (Transaction, bool) {
 	return Transaction{}, false
 }
 
-// UndoOperation returns the inverse operation for a transaction.
-// Install -> remove, Remove -> install, Upgrade cannot be truly undone but we allow reinstall.
 func UndoOperation(op Operation) Operation {
 	switch op {
 	case OpInstall:
@@ -138,12 +128,10 @@ func UndoOperation(op Operation) Operation {
 	return OpInstall
 }
 
-// FormatTimestamp returns a human-friendly timestamp.
 func FormatTimestamp(t time.Time) string {
 	return t.Format("2006-01-02 15:04:05")
 }
 
-// Summary returns a short one-line description of the transaction.
 func (t Transaction) Summary() string {
 	status := "✔"
 	if !t.Success {

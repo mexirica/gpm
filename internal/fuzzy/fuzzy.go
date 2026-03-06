@@ -10,12 +10,8 @@ import (
 
 // Result holds the outcome of a fuzzy score computation.
 type Result struct {
-	// Matched is true when all pattern chars were found in order.
 	Matched bool
-	// Score ranks the quality of the match (higher is better).
 	Score int
-	// Positions holds the indices into the target string where each
-	// pattern character was matched.
 	Positions []int
 }
 

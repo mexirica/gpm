@@ -26,7 +26,6 @@ func ParallelInstallCmd(name string) *exec.Cmd {
 	return c
 }
 
-// ParallelUpgradeCmd returns an upgrade command with parallel download options.
 func ParallelUpgradeCmd(name string) *exec.Cmd {
 	c := exec.Command("sudo", "apt-get", "install", "--only-upgrade", "-y",
 		"-o", "Acquire::Queue-Mode=access",
@@ -41,7 +40,6 @@ func ParallelUpgradeCmd(name string) *exec.Cmd {
 	return c
 }
 
-// ParallelUpgradeAllCmd returns an upgrade-all command with parallel download options.
 func ParallelUpgradeAllCmd() *exec.Cmd {
 	c := exec.Command("sudo", "apt-get", "upgrade", "-y",
 		"-o", "Acquire::Queue-Mode=access",
