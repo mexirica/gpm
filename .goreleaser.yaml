@@ -30,9 +30,7 @@ nfpms:
     license: MIT
     formats:
       - deb
-    contents:
-      - src: "{{ .Builds.gpm.output }}"
-        dst: /usr/bin/{{ .ProjectName }}
+    bindir: /usr/bin
 
 changelog:
   sort: asc
