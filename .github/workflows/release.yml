@@ -22,12 +22,15 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: '1.26'
+          
+      - name: Install APT utilities
+        run: sudo apt-get update && sudo apt-get install -y dpkg-dev apt-utils
 
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v5
+        uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
-          version: latest
+          version: "~> v2"
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GH_PAT }}
@@ -53,13 +56,16 @@ jobs:
           echo "Components: main" >> Release
           apt-ftparchive release . >> Release
 
-      - name: Sign APT Repo
+      - name: Import GPG key
+        id: import_gpg
         uses: crazy-max/ghaction-import-gpg@v6
         with:
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
           passphrase: ${{ secrets.GPG_PASSPHRASE }}
           export_armored: true
-      - run: |
+
+      - name: Sign APT Repo
+        run: |
           gpg --batch --yes --passphrase "${{ secrets.GPG_PASSPHRASE }}" --armor --detach-sign --clearsign -o repo/dists/stable/InRelease repo/dists/stable/Release
           gpg --batch --yes --passphrase "${{ secrets.GPG_PASSPHRASE }}" --armor --detach-sign -o repo/dists/stable/Release.gpg repo/dists/stable/Release
           gpg --armor --export ${{ steps.import_gpg.outputs.keyid }} > repo/public-key.gpg
