@@ -1,3 +1,4 @@
+
 package app
 
 import (
@@ -9,6 +10,13 @@ import (
 	"github.com/mexirica/aptui/internal/fetch"
 	"github.com/mexirica/aptui/internal/model"
 )
+
+func purgeBatchCmd(names []string) tea.Cmd {
+	cmd := apt.PurgeBatchCmd(names)
+	return tea.ExecProcess(cmd, func(err error) tea.Msg {
+		return execFinishedMsg{op: "purge", name: strings.Join(names, " "), err: err}
+	})
+}
 
 func loadAllPackageNamesCmd() tea.Cmd {
 	return func() tea.Msg {

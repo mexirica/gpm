@@ -1,3 +1,4 @@
+// Package app provides the main Bubbletea application model and logic for the aptui TUI.
 package app
 
 import (

@@ -101,10 +101,10 @@ func (a App) undoTransaction() (tea.Model, tea.Cmd) {
 		a.status = ui.ErrorStyle.Render("Cannot undo a failed transaction.")
 		return a, nil
 	}
-	if tx.Operation == history.OpUpgradeAll {
-		a.status = ui.ErrorStyle.Render("Cannot undo upgrade-all: downgrade is not supported.")
-		return a, nil
-	}
+	       if tx.Operation == history.OpUpgradeAll || tx.Operation == history.OpUpgrade {
+		       a.status = ui.ErrorStyle.Render("Cannot undo upgrade: downgrade is not supported.")
+		       return a, nil
+	       }
 	undoOp := history.UndoOperation(tx.Operation)
 	var cmd tea.Cmd
 	switch undoOp {

@@ -210,21 +210,19 @@ func (a App) removeSelectedPackages() (tea.Model, tea.Cmd) {
 }
 
 func (a App) purgeSelectedPackages() (tea.Model, tea.Cmd) {
-	if len(a.selected) > 0 {
-		var cmds []tea.Cmd
-		var names []string
-		for name := range a.selected {
-			cmds = append(cmds, purgePackageCmd(name))
-			names = append(names, name)
-		}
-		a.pendingExecOp = "purge"
-		a.pendingExecPkgs = names
-		a.pendingExecCount = len(cmds)
-		a.loading = true
-		a.status = fmt.Sprintf("Purging %d packages...", len(cmds))
-		a.selected = make(map[string]bool)
-		return a, tea.Batch(cmds...)
-	}
+	       if len(a.selected) > 0 {
+		       var names []string
+		       for name := range a.selected {
+			       names = append(names, name)
+		       }
+		       a.pendingExecOp = "purge"
+		       a.pendingExecPkgs = names
+		       a.pendingExecCount = len(names)
+		       a.loading = true
+		       a.status = fmt.Sprintf("Purging %d packages...", len(names))
+		       a.selected = make(map[string]bool)
+		       return a, purgeBatchCmd(names)
+	       }
 	if len(a.filtered) > 0 && a.selectedIdx < len(a.filtered) {
 		pkg := a.filtered[a.selectedIdx]
 		if !pkg.Installed {
