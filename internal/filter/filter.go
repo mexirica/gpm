@@ -18,9 +18,28 @@
 package filter
 
 import (
+	"sort"
 	"strconv"
 	"strings"
 	"unicode"
+)
+
+// SortColumn represents which column to sort by.
+type SortColumn int
+
+// SortInfo holds the current sorting state for display purposes.
+type SortInfo struct {
+	Column SortColumn
+	Desc   bool
+}
+
+const (
+	SortNone SortColumn = iota
+	SortName
+	SortVersion
+	SortSize
+	SortSection
+	SortArchitecture
 )
 
 // SizeOp represents a comparison operator for size filters.
@@ -47,9 +66,11 @@ type Filter struct {
 	Size         *SizeFilter
 	Installed    *bool
 	Upgradable   *bool
-	Name         string // contains (case-insensitive)
-	Version      string // contains (case-insensitive)
-	Description  string // contains (case-insensitive)
+	Name         string     // contains (case-insensitive)
+	Version      string     // contains (case-insensitive)
+	Description  string     // contains (case-insensitive)
+	OrderBy      SortColumn // column to sort by
+	OrderDesc    bool       // true for descending order
 }
 
 // IsEmpty returns true if no filter criteria are set.
@@ -61,7 +82,8 @@ func (f Filter) IsEmpty() bool {
 		f.Upgradable == nil &&
 		f.Name == "" &&
 		f.Version == "" &&
-		f.Description == ""
+		f.Description == "" &&
+		f.OrderBy == SortNone
 }
 
 // NeedsMetadata returns true if the filter uses fields (Section, Architecture, Size)
@@ -208,6 +230,19 @@ func Parse(query string) Filter {
 			}
 		}
 
+		// Sorting: order:column or order:column:desc
+		if strings.HasPrefix(lower, "order:") {
+			orderExpr := tok[6:]
+			parts := strings.SplitN(orderExpr, ":", 2)
+			if len(parts) >= 1 {
+				f.OrderBy = parseSortColumn(parts[0])
+				if len(parts) == 2 {
+					f.OrderDesc = strings.EqualFold(parts[1], "desc")
+				}
+			}
+			continue
+		}
+
 		// key:value filters
 		if idx := strings.Index(tok, ":"); idx > 0 {
 			key := strings.ToLower(tok[:idx])
@@ -281,12 +316,19 @@ func (f Filter) Describe() string {
 		}
 		parts = append(parts, "size"+opStr+formatKB(f.Size.KB))
 	}
+	if f.OrderBy != SortNone {
+		dir := "asc"
+		if f.OrderDesc {
+			dir = "desc"
+		}
+		parts = append(parts, "order:"+sortColumnName(f.OrderBy)+":"+dir)
+	}
 	return strings.Join(parts, " ")
 }
 
 // HelpText returns the syntax help shown in the filter bar.
 func HelpText() string {
-	return "section: arch: size>|<|= name: ver: desc: installed !installed upgradable"
+	return "section: arch: size>|<|= name: ver: desc: installed !installed upgradable order:column:asc|desc"
 }
 
 // parseSizeExpr parses a size expression like ">10MB", ">=100kB", "<5GB", "=500kB".
@@ -418,4 +460,103 @@ func tokenize(s string) []string {
 
 func containsFold(s, substr string) bool {
 	return strings.Contains(strings.ToLower(s), strings.ToLower(substr))
+}
+
+func parseSortColumn(s string) SortColumn {
+	switch strings.ToLower(s) {
+	case "name":
+		return SortName
+	case "version", "ver":
+		return SortVersion
+	case "size":
+		return SortSize
+	case "section", "sec":
+		return SortSection
+	case "arch", "architecture":
+		return SortArchitecture
+	default:
+		return SortNone
+	}
+}
+
+func sortColumnName(c SortColumn) string {
+	switch c {
+	case SortName:
+		return "name"
+	case SortVersion:
+		return "version"
+	case SortSize:
+		return "size"
+	case SortSection:
+		return "section"
+	case SortArchitecture:
+		return "architecture"
+	default:
+		return ""
+	}
+}
+
+// SortColumnLabel returns a human-friendly label for a SortColumn.
+func SortColumnLabel(c SortColumn) string {
+	return sortColumnName(c)
+}
+
+// Sort sorts a slice of PackageData in place according to the filter's OrderBy and OrderDesc.
+// Packages with unknown/empty values for the sort field are pushed to the end.
+func Sort(pkgs []PackageData, f Filter) {
+	if f.OrderBy == SortNone {
+		return
+	}
+	sort.SliceStable(pkgs, func(i, j int) bool {
+		iEmpty := pdFieldEmpty(pkgs[i], f.OrderBy)
+		jEmpty := pdFieldEmpty(pkgs[j], f.OrderBy)
+		if iEmpty != jEmpty {
+			return !iEmpty
+		}
+		if iEmpty && jEmpty {
+			return false
+		}
+
+		var less bool
+		switch f.OrderBy {
+		case SortName:
+			less = strings.ToLower(pkgs[i].Name) < strings.ToLower(pkgs[j].Name)
+		case SortVersion:
+			less = pkgs[i].Version < pkgs[j].Version
+		case SortSize:
+			less = ParseSizeToKB(pkgs[i].Size) < ParseSizeToKB(pkgs[j].Size)
+		case SortSection:
+			less = strings.ToLower(pkgs[i].Section) < strings.ToLower(pkgs[j].Section)
+		case SortArchitecture:
+			less = strings.ToLower(pkgs[i].Architecture) < strings.ToLower(pkgs[j].Architecture)
+		default:
+			return false
+		}
+		if f.OrderDesc {
+			return !less
+		}
+		return less
+	})
+}
+
+func pdFieldEmpty(p PackageData, col SortColumn) bool {
+	switch col {
+	case SortName:
+		return p.Name == ""
+	case SortVersion:
+		return p.Version == "" && p.NewVersion == ""
+	case SortSize:
+		return p.Size == "" || p.Size == "-"
+	case SortSection:
+		return p.Section == ""
+	case SortArchitecture:
+		return p.Architecture == ""
+	default:
+		return false
+	}
+}
+
+// SortPackages sorts a slice of model-level packages using the filter's ordering.
+func SortPackages(pkgs []PackageData, f Filter) {
+	Sort(pkgs, f)
 }

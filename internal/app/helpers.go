@@ -94,8 +94,63 @@ func (a *App) applyFilter() {
 			a.filtered[i] = sp.pkg
 		}
 	}
+
+	// Apply sorting if order is specified in the filter
+	if af.OrderBy != filter.SortNone {
+		sort.SliceStable(a.filtered, func(i, j int) bool {
+			pi, pj := a.filtered[i], a.filtered[j]
+
+			// Push packages with unknown data to the end
+			iEmpty, jEmpty := sortFieldEmpty(pi, af.OrderBy), sortFieldEmpty(pj, af.OrderBy)
+			if iEmpty != jEmpty {
+				return !iEmpty // non-empty comes first
+			}
+			if iEmpty && jEmpty {
+				return false // both empty, keep original order
+			}
+
+			var less bool
+			switch af.OrderBy {
+			case filter.SortName:
+				less = strings.ToLower(pi.Name) < strings.ToLower(pj.Name)
+			case filter.SortVersion:
+				less = pi.Version < pj.Version
+			case filter.SortSize:
+				less = filter.ParseSizeToKB(pi.Size) < filter.ParseSizeToKB(pj.Size)
+			case filter.SortSection:
+				less = strings.ToLower(pi.Section) < strings.ToLower(pj.Section)
+			case filter.SortArchitecture:
+				less = strings.ToLower(pi.Architecture) < strings.ToLower(pj.Architecture)
+			default:
+				return false
+			}
+			if af.OrderDesc {
+				return !less
+			}
+			return less
+		})
+	}
+
 	a.selectedIdx = 0
 	a.scrollOffset = 0
+}
+
+// sortFieldEmpty returns true if the sort field for the given package is empty/unknown.
+func sortFieldEmpty(p model.Package, col filter.SortColumn) bool {
+	switch col {
+	case filter.SortName:
+		return p.Name == ""
+	case filter.SortVersion:
+		return p.Version == "" && p.NewVersion == ""
+	case filter.SortSize:
+		return p.Size == "" || p.Size == "-"
+	case filter.SortSection:
+		return p.Section == ""
+	case filter.SortArchitecture:
+		return p.Architecture == ""
+	default:
+		return false
+	}
 }
 
 // loadFilterCandidateInfo fetches metadata only for packages that pass all
