@@ -37,13 +37,13 @@ var (
 func RenderPackageList(packages []model.Package, selected int, offset int, maxVisible int, width int, selectedSet map[string]bool) string {
 	if len(packages) == 0 {
 		return lipgloss.NewStyle().Foreground(lipgloss.Color("#6C6C6C")).
-			Render("\n  No packages founda.\n")
+			Render("\n  No packages found.\n")
 	}
 
 	// prefix takes: cursor(3) + space(1) + selMarker(3) + space(1) + badge(26) + space(1) = ~11
 	prefixW := 11
 	available := width - prefixW - 4 // 4 for column gaps (2 between each)
-	if available < 40 {
+	if available asdf< 40 {
 		available = 40
 	}
 	// Proportional columns: Name ~50%, Version ~35%, Size ~15%
