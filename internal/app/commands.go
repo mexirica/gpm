@@ -96,7 +96,7 @@ func loadTransactionDepsCmd(txIdx int, packages []string) tea.Cmd {
 }
 
 func installPackageCmd(name string) tea.Cmd {
-	cmd := apt.ParallelInstallCmd(name)
+	cmd := apt.InstallCmd(name)
 	return tea.ExecProcess(cmd, func(err error) tea.Msg {
 		return execFinishedMsg{op: "install", name: name, err: err}
 	})
@@ -115,21 +115,21 @@ func purgePackageCmd(name string) tea.Cmd {
 }
 
 func upgradePackageCmd(name string) tea.Cmd {
-	cmd := apt.ParallelUpgradeCmd(name)
+	cmd := apt.UpgradeCmd(name)
 	return tea.ExecProcess(cmd, func(err error) tea.Msg {
 		return execFinishedMsg{op: "upgrade", name: name, err: err}
 	})
 }
 
 func upgradeAllPackagesCmd() tea.Cmd {
-	cmd := apt.ParallelUpgradeAllCmd()
+	cmd := apt.UpgradeAllCmd()
 	return tea.ExecProcess(cmd, func(err error) tea.Msg {
 		return execFinishedMsg{op: "upgrade-all", name: "all", err: err}
 	})
 }
 
 func installBatchCmd(names []string) tea.Cmd {
-	cmd := apt.ParallelInstallBatchCmd(names)
+	cmd := apt.InstallBatchCmd(names)
 	return tea.ExecProcess(cmd, func(err error) tea.Msg {
 		return execFinishedMsg{op: "install", name: strings.Join(names, " "), err: err}
 	})
@@ -143,7 +143,7 @@ func removeBatchCmd(names []string) tea.Cmd {
 }
 
 func upgradeBatchCmd(names []string) tea.Cmd {
-	cmd := apt.ParallelUpgradeBatchCmd(names)
+	cmd := apt.UpgradeBatchCmd(names)
 	return tea.ExecProcess(cmd, func(err error) tea.Msg {
 		return execFinishedMsg{op: "upgrade", name: strings.Join(names, " "), err: err}
 	})
