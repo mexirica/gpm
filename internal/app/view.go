@@ -37,8 +37,7 @@ func (a App) View() string {
 		centered := lipgloss.NewStyle().Width(w).Align(lipgloss.Center).Render(loadingLine)
 		listView = strings.Repeat("\n", pad) + centered + strings.Repeat("\n", h-pad)
 	} else {
-		af := filter.Parse(a.advancedFilter)
-		si := filter.SortInfo{Column: af.OrderBy, Desc: af.OrderDesc}
+		si := a.effectiveSortInfo()
 		listView = components.RenderPackageList(a.filtered, a.selectedIdx, a.scrollOffset, a.packageListHeight(), w, a.selected, si)
 	}
 	listView = tabBar + "\n" + listView

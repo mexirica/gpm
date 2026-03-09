@@ -60,6 +60,11 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case fetchApplyMsg:
 		return a.onMirrorApplyResult(msg)
 
+	case tea.MouseMsg:
+		if !a.fetchView && !a.transactionView && !a.loading {
+			return a.onMouseClick(msg)
+		}
+
 	case tea.KeyMsg:
 		if a.fetchView {
 			return a.onFetchKeypress(msg)
