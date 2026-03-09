@@ -41,7 +41,7 @@ func ParallelUpgradeCmd(name string) *exec.Cmd {
 }
 
 func ParallelUpgradeAllCmd() *exec.Cmd {
-	c := exec.Command("sudo", "apt-get", "upgrade", "-y",
+	c := exec.Command("sudo", "apt-get", "dist-upgrade", "-y",
 		"-o", "Acquire::Queue-Mode=access",
 		"-o", "Acquire::Retries=3",
 		"-o", "Acquire::http::Pipeline-Depth=5",
