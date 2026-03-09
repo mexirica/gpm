@@ -278,7 +278,7 @@ func (a App) upgradeAllPackages() (tea.Model, tea.Cmd) {
 	a.pendingExecPkgs = []string{"all"}
 	a.pendingExecCount = 1
 	a.loading = true
-	a.status = "Upgrading ALL packages (sudo apt-get upgrade)..."
+	a.status = "Upgrading ALL packages (sudo apt-get dist-upgrade)..."
 	return a, upgradeAllPackagesCmd()
 }
 
