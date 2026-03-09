@@ -4,16 +4,9 @@ on:
   push:
     branches:
       - '**'     
-    paths-ignore:
-      - '**/*.md'
-      - 'docs/**'
-      - '.github/ISSUE_TEMPLATE/**'
   pull_request:
     branches:
       - main          
-    paths-ignore:
-      - '**/*.md'
-      - 'docs/**'
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
@@ -53,7 +46,8 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
-          version: latest
+          version: 1.26
+          install-mode: go
           args: --timeout=5m
 
   test:
