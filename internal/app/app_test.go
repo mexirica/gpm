@@ -517,10 +517,6 @@ func TestExecFinishedMsg(t *testing.T) {
 	m, _ := a.Update(msg)
 	app := m.(App)
 
-	if app.loading {
-		// It reloads packages, so loading may be true again
-		// but pendingExecCount should be 0
-	}
 	if app.pendingExecCount != 0 {
 		t.Errorf("pendingExecCount should be 0, got %d", app.pendingExecCount)
 	}

@@ -20,12 +20,6 @@ var (
 			Foreground(lipgloss.Color("#7D56F4")).
 			Bold(true)
 
-	counterStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#6C6C6C"))
-
-	separatorStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#4A4A4A"))
-
 	versionStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#8888AA"))
 
