@@ -23,6 +23,7 @@ Built with [Bubble Tea](https://github.com/charmbracelet/bubbletea), [Lip Gloss]
 - **Column sorting** — sort packages by name, version, size, section or architecture (ascending/descending)
 - **Tabs** — switch between *All*, *Installed* and *Upgradable* views
 - **Multi-select** — mark multiple packages with `space`, then bulk install/remove/upgrade
+- **Mouse support** — click to select packages, click again to toggle selection, click column headers to sort
 - **Parallel downloads** — installs and upgrades use parallel downloads by default for faster operations
 - **Transaction history** — every operation is recorded; undo (`z`) or redo (`x`) past transactions
 - **Fetch mirrors** — detect your distro, test mirror latency, and apply the fastest sources
@@ -99,6 +100,15 @@ See the full [filter documentation](docs/filter.md) for all available options.
 |---|---|
 | `space` | Toggle select current package |
 | `A` | Select / deselect all filtered packages |
+| `click` | Select a package (click again to toggle check) |
+
+### Sorting
+
+| Key / Mouse | Action |
+|---|---|
+| Click column header | Sort by that column (click again to reverse, third click to clear) |
+| `F` + `order:name` | Sort by name via filter query |
+| `F` + `order:size:desc` | Sort by size descending via filter query |
 
 ### Actions
 

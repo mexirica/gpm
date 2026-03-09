@@ -95,13 +95,19 @@ func (a *App) applyFilter() {
 		}
 	}
 
-	// Apply sorting if order is specified in the filter
-	if af.OrderBy != filter.SortNone {
+	// Apply sorting: click-based sort takes priority over filter-based sort
+	sortCol := af.OrderBy
+	sortDesc := af.OrderDesc
+	if a.sortColumn != filter.SortNone {
+		sortCol = a.sortColumn
+		sortDesc = a.sortDesc
+	}
+	if sortCol != filter.SortNone {
 		sort.SliceStable(a.filtered, func(i, j int) bool {
 			pi, pj := a.filtered[i], a.filtered[j]
 
 			// Push packages with unknown data to the end
-			iEmpty, jEmpty := sortFieldEmpty(pi, af.OrderBy), sortFieldEmpty(pj, af.OrderBy)
+			iEmpty, jEmpty := sortFieldEmpty(pi, sortCol), sortFieldEmpty(pj, sortCol)
 			if iEmpty != jEmpty {
 				return !iEmpty // non-empty comes first
 			}
@@ -110,7 +116,7 @@ func (a *App) applyFilter() {
 			}
 
 			var less bool
-			switch af.OrderBy {
+			switch sortCol {
 			case filter.SortName:
 				less = strings.ToLower(pi.Name) < strings.ToLower(pj.Name)
 			case filter.SortVersion:
@@ -124,7 +130,7 @@ func (a *App) applyFilter() {
 			default:
 				return false
 			}
-			if af.OrderDesc {
+			if sortDesc {
 				return !less
 			}
 			return less
@@ -135,7 +141,16 @@ func (a *App) applyFilter() {
 	a.scrollOffset = 0
 }
 
-// sortFieldEmpty returns true if the sort field for the given package is empty/unknown.
+// effectiveSortInfo returns the active sort state, preferring click-based sort
+// over filter-based sort.
+func (a App) effectiveSortInfo() filter.SortInfo {
+	if a.sortColumn != filter.SortNone {
+		return filter.SortInfo{Column: a.sortColumn, Desc: a.sortDesc}
+	}
+	af := filter.Parse(a.advancedFilter)
+	return filter.SortInfo{Column: af.OrderBy, Desc: af.OrderDesc}
+}
+
 func sortFieldEmpty(p model.Package, col filter.SortColumn) bool {
 	switch col {
 	case filter.SortName:

@@ -9,6 +9,7 @@ import (
 
 	"github.com/mexirica/aptui/internal/apt"
 	"github.com/mexirica/aptui/internal/fetch"
+	"github.com/mexirica/aptui/internal/filter"
 	"github.com/mexirica/aptui/internal/history"
 	"github.com/mexirica/aptui/internal/model"
 	"github.com/mexirica/aptui/internal/ui"
@@ -46,6 +47,9 @@ type App struct {
 	advancedFilter string
 
 	selected map[string]bool
+
+	sortColumn filter.SortColumn
+	sortDesc   bool
 
 	transactionStore  *history.Store
 	transactionView   bool
