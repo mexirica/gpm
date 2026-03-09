@@ -67,6 +67,9 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if a.transactionView {
 			return a.onTransactionKeypress(msg)
 		}
+		if a.filtering {
+			return a.onFilterKeypress(msg)
+		}
 		if a.searching {
 			return a.onSearchKeypress(msg)
 		}
@@ -129,6 +132,8 @@ func (a App) onAllNamesLoaded(msg allNamesMsg) (tea.Model, tea.Cmd) {
 			if info, ok := a.infoCache[name]; ok {
 				pkg.NewVersion = info.Version
 				pkg.Size = info.Size
+				pkg.Section = info.Section
+				pkg.Architecture = info.Architecture
 			}
 			a.allPackages = append(a.allPackages, pkg)
 			seen[name] = true
@@ -176,6 +181,8 @@ func (a App) onAllPackagesLoaded(msg allPackagesMsg) (tea.Model, tea.Cmd) {
 			if info, ok := a.infoCache[name]; ok {
 				pkg.NewVersion = info.Version
 				pkg.Size = info.Size
+				pkg.Section = info.Section
+				pkg.Architecture = info.Architecture
 			}
 			all = append(all, pkg)
 			seen[name] = true
@@ -208,8 +215,32 @@ func (a App) onPackageInfoLoaded(msg infoLoadedMsg) (tea.Model, tea.Cmd) {
 			if a.allPackages[i].Size == "" {
 				a.allPackages[i].Size = info.Size
 			}
+			if a.allPackages[i].Section == "" {
+				a.allPackages[i].Section = info.Section
+			}
+			if a.allPackages[i].Architecture == "" {
+				a.allPackages[i].Architecture = info.Architecture
+			}
 		}
 	}
+
+	// If an advanced filter is active, re-apply it now that metadata has arrived.
+	if a.advancedFilter != "" {
+		prevIdx := a.selectedIdx
+		prevOffset := a.scrollOffset
+		a.applyFilter()
+		a.selectedIdx = prevIdx
+		a.scrollOffset = prevOffset
+		if a.selectedIdx >= len(a.filtered) {
+			a.selectedIdx = len(a.filtered) - 1
+			if a.selectedIdx < 0 {
+				a.selectedIdx = 0
+			}
+		}
+		a.status = fmt.Sprintf("%d packages matching filter", len(a.filtered))
+		return a, nil
+	}
+
 	for i := range a.filtered {
 		if info, ok := msg.info[a.filtered[i].Name]; ok {
 			if a.filtered[i].Version == "" {
@@ -217,6 +248,12 @@ func (a App) onPackageInfoLoaded(msg infoLoadedMsg) (tea.Model, tea.Cmd) {
 			}
 			if a.filtered[i].Size == "" {
 				a.filtered[i].Size = info.Size
+			}
+			if a.filtered[i].Section == "" {
+				a.filtered[i].Section = info.Section
+			}
+			if a.filtered[i].Architecture == "" {
+				a.filtered[i].Architecture = info.Architecture
 			}
 		}
 	}
@@ -243,9 +280,13 @@ func (a App) onSearchResultLoaded(msg searchResultMsg) (tea.Model, tea.Cmd) {
 		if inst, ok := installedMap[msg.pkgs[i].Name]; ok {
 			msg.pkgs[i].Version = inst.Version
 			msg.pkgs[i].Size = inst.Size
+			msg.pkgs[i].Section = inst.Section
+			msg.pkgs[i].Architecture = inst.Architecture
 		} else if info, ok := a.infoCache[msg.pkgs[i].Name]; ok {
 			msg.pkgs[i].NewVersion = info.Version
 			msg.pkgs[i].Size = info.Size
+			msg.pkgs[i].Section = info.Section
+			msg.pkgs[i].Architecture = info.Architecture
 		}
 	}
 	a.filtered = msg.pkgs
@@ -276,6 +317,12 @@ func (a App) onPackageDetailLoaded(msg detailLoadedMsg) (tea.Model, tea.Cmd) {
 					if a.filtered[i].Size == "" {
 						a.filtered[i].Size = pi.Size
 					}
+					if a.filtered[i].Section == "" {
+						a.filtered[i].Section = pi.Section
+					}
+					if a.filtered[i].Architecture == "" {
+						a.filtered[i].Architecture = pi.Architecture
+					}
 					break
 				}
 			}
@@ -286,6 +333,12 @@ func (a App) onPackageDetailLoaded(msg detailLoadedMsg) (tea.Model, tea.Cmd) {
 					}
 					if a.allPackages[i].Size == "" {
 						a.allPackages[i].Size = pi.Size
+					}
+					if a.allPackages[i].Section == "" {
+						a.allPackages[i].Section = pi.Section
+					}
+					if a.allPackages[i].Architecture == "" {
+						a.allPackages[i].Architecture = pi.Architecture
 					}
 					break
 				}

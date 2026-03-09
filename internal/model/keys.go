@@ -9,6 +9,7 @@ type KeyMap struct {
 	Enter       key.Binding
 	Back        key.Binding
 	Search      key.Binding
+	Filter      key.Binding
 	Install     key.Binding
 	Remove      key.Binding
 	Upgrade     key.Binding
@@ -48,6 +49,10 @@ var Keys = KeyMap{
 	Search: key.NewBinding(
 		key.WithKeys("/"),
 		key.WithHelp("/", "search"),
+	),
+	Filter: key.NewBinding(
+		key.WithKeys("F"),
+		key.WithHelp("F", "filter"),
 	),
 	Install: key.NewBinding(
 		key.WithKeys("i"),
@@ -122,13 +127,13 @@ var Keys = KeyMap{
 }
 
 func (k KeyMap) ShortHelp() []key.Binding {
-	return []key.Binding{k.Search, k.Select, k.SelectAll, k.Install, k.Remove, k.Help, k.Quit}
+	return []key.Binding{k.Search, k.Filter, k.Select, k.SelectAll, k.Install, k.Remove, k.Help, k.Quit}
 }
 
 func (k KeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.Up, k.Down, k.PageUp, k.PageDown, k.Tab},
-		{k.Enter, k.Search, k.Select, k.SelectAll, k.Refresh},
+		{k.Enter, k.Search, k.Filter, k.Select, k.SelectAll, k.Refresh},
 		{k.Install, k.Remove, k.Upgrade, k.UpgradeAll, k.Fetch, k.Purge},
 		{k.Transaction, k.TranUndo, k.TranRedo, k.Help, k.Quit},
 	}

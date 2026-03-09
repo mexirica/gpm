@@ -7,6 +7,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 
 	"github.com/mexirica/aptui/internal/fetch"
+	"github.com/mexirica/aptui/internal/filter"
 	"github.com/mexirica/aptui/internal/model"
 	"github.com/mexirica/aptui/internal/ui"
 	"github.com/mexirica/aptui/internal/ui/components"
@@ -50,6 +51,14 @@ func (a App) View() string {
 		footer = append(footer, "  "+a.searchInput.View())
 	} else {
 		footer = append(footer, components.RenderSearchPrompt(a.filterQuery, false))
+	}
+
+	// Advanced filter bar
+	if a.filtering {
+		footer = append(footer, "  "+a.filterInput.View())
+	} else if a.advancedFilter != "" {
+		af := filter.Parse(a.advancedFilter)
+		footer = append(footer, components.RenderFilterPrompt(af.Describe(), false))
 	}
 
 	sep := lipgloss.NewStyle().Foreground(ui.ColorPrimary).Render(strings.Repeat("─", w))
@@ -137,6 +146,12 @@ func (a App) renderBasicDetail(pkg model.Package) string {
 		b.WriteString(fmt.Sprintf("  %s %s %s\n", lbl.Render("New Version"), sepStyle.Render(":"),
 			lipgloss.NewStyle().Foreground(ui.ColorWarning).Bold(true).Render(pkg.NewVersion)))
 	}
+	if pkg.Section != "" {
+		b.WriteString(fmt.Sprintf("  %s %s %s\n", lbl.Render("Section"), sepStyle.Render(":"), val.Render(pkg.Section)))
+	}
+	if pkg.Architecture != "" {
+		b.WriteString(fmt.Sprintf("  %s %s %s\n", lbl.Render("Architecture"), sepStyle.Render(":"), val.Render(pkg.Architecture)))
+	}
 	if pkg.Description != "" {
 		b.WriteString(fmt.Sprintf("  %s %s %s\n", lbl.Render("Description"), sepStyle.Render(":"), val.Render(pkg.Description)))
 	}
@@ -214,7 +229,6 @@ func (a App) renderFetchView(w int) string {
 }
 
 func (a App) renderTransactionView(w int) string {
-
 	var footerParts []string
 	counterStyle := lipgloss.NewStyle().Foreground(ui.ColorSecondary)
 	footerParts = append(footerParts, counterStyle.Render(fmt.Sprintf("  %d transactions", len(a.transactionItems))))

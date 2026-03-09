@@ -48,7 +48,7 @@ func parseDpkgOutput(output string, installed bool) []model.Package {
 		if strings.HasPrefix(line, " ") || strings.HasPrefix(line, "\t") {
 			continue
 		}
-		parts := strings.SplitN(line, "\t", 4)
+		parts := strings.SplitN(line, "\t", 6)
 		if len(parts) < 2 {
 			continue
 		}
@@ -62,6 +62,12 @@ func parseDpkgOutput(output string, installed bool) []model.Package {
 		}
 		if len(parts) >= 4 {
 			pkg.Description = strings.TrimSpace(parts[3])
+		}
+		if len(parts) >= 5 {
+			pkg.Section = strings.TrimSpace(parts[4])
+		}
+		if len(parts) >= 6 {
+			pkg.Architecture = strings.TrimSpace(parts[5])
 		}
 		if pkg.Name != "" {
 			packages = append(packages, pkg)

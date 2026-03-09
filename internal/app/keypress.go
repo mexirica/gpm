@@ -28,8 +28,10 @@ func (a App) onKeypress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return a.toggleHelp()
 	case "/":
 		return a.openSearch()
+	case "F":
+		return a.openFilter()
 	case "esc":
-		return a.clearFilter()
+		return a.clearFilterOrSearch()
 	case "ctrl+r":
 		return a.reloadPackages()
 	case "t":
@@ -53,7 +55,29 @@ func (a App) openSearch() (tea.Model, tea.Cmd) {
 	return a, textinput.Blink
 }
 
-func (a App) clearFilter() (tea.Model, tea.Cmd) {
+func (a App) openFilter() (tea.Model, tea.Cmd) {
+	a.filtering = true
+	a.filterInput.Focus()
+	a.filterInput.SetValue(a.advancedFilter)
+	return a, textinput.Blink
+}
+
+func (a App) clearFilterOrSearch() (tea.Model, tea.Cmd) {
+	// First clear the advanced filter if active
+	if a.advancedFilter != "" {
+		a.advancedFilter = ""
+		a.applyFilter()
+		a.selectedIdx = 0
+		a.scrollOffset = 0
+		a.status = fmt.Sprintf("%d packages ", len(a.filtered))
+		var cmds []tea.Cmd
+		if len(a.filtered) > 0 {
+			cmds = append(cmds, showPackageDetailCmd(a.filtered[0].Name))
+		}
+		cmds = append(cmds, a.preloadVisiblePackageInfo())
+		return a, tea.Batch(cmds...)
+	}
+	// Then clear search
 	if a.filterQuery == "" {
 		return a, nil
 	}
@@ -73,6 +97,7 @@ func (a App) clearFilter() (tea.Model, tea.Cmd) {
 func (a App) reloadPackages() (tea.Model, tea.Cmd) {
 	a.loading = true
 	a.filterQuery = ""
+	a.advancedFilter = ""
 	a.status = "Reloading..."
 	return a, reloadAllPackages
 }

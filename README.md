@@ -76,6 +76,7 @@ aptui
 | Key | Action |
 |---|---|
 | `/` | Open search bar |
+| `F` | Open filter bar |
 | `enter` | Confirm search |
 | `esc` | Clear search / go back |
 

@@ -41,6 +41,10 @@ type App struct {
 	searching   bool
 	filterQuery string
 
+	filterInput    textinput.Model
+	filtering      bool
+	advancedFilter string
+
 	selected map[string]bool
 
 	transactionStore  *history.Store
@@ -85,6 +89,11 @@ func New() App {
 	ti.CharLimit = 100
 	ti.Width = 50
 
+	fi := textinput.New()
+	fi.Placeholder = "section: arch: size>|<|= installed upgradable name: ver: desc:"
+	fi.CharLimit = 200
+	fi.Width = 80
+
 	s := spinner.New()
 	s.Spinner = spinner.Dot
 	s.Style = lipgloss.NewStyle().Foreground(ui.ColorPrimary)
@@ -102,6 +111,7 @@ func New() App {
 		selected:         make(map[string]bool),
 		infoCache:        make(map[string]apt.PackageInfo),
 		searchInput:      ti,
+		filterInput:      fi,
 		spinner:          s,
 		help:             h,
 		keys:             model.Keys,

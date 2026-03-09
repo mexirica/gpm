@@ -7,6 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/mexirica/aptui/internal/apt"
+	"github.com/mexirica/aptui/internal/filter"
 	"github.com/mexirica/aptui/internal/fuzzy"
 	"github.com/mexirica/aptui/internal/model"
 )
@@ -16,8 +17,8 @@ type scoredPackage struct {
 	score int
 }
 
-// applyFilter rebuilds the filtered list from allPackages based on active tab and search query.
-// Uses fuzzy scoring when a search query is active.
+// applyFilter rebuilds the filtered list from allPackages based on active tab,
+// advanced filter, and search query. Uses fuzzy scoring when a search query is active.
 func (a *App) applyFilter() {
 	var source []model.Package
 	switch a.activeTab {
@@ -35,6 +36,29 @@ func (a *App) applyFilter() {
 		}
 	default:
 		source = a.allPackages
+	}
+
+	// Apply advanced filter if set
+	af := filter.Parse(a.advancedFilter)
+	if !af.IsEmpty() {
+		var filtered []model.Package
+		for _, p := range source {
+			pd := filter.PackageData{
+				Name:         p.Name,
+				Version:      p.Version,
+				NewVersion:   p.NewVersion,
+				Size:         p.Size,
+				Description:  p.Description,
+				Installed:    p.Installed,
+				Upgradable:   p.Upgradable,
+				Section:      p.Section,
+				Architecture: p.Architecture,
+			}
+			if af.Match(pd) {
+				filtered = append(filtered, p)
+			}
+		}
+		source = filtered
 	}
 
 	if a.filterQuery == "" {
@@ -72,6 +96,48 @@ func (a *App) applyFilter() {
 	}
 	a.selectedIdx = 0
 	a.scrollOffset = 0
+}
+
+// loadFilterCandidateInfo fetches metadata only for packages that pass all
+// non-metadata filters but are missing metadata needed by the active filter.
+// This is much faster than loading ALL packages since non-metadata filters
+// (name, version, installed, etc.) narrow the set first.
+func (a *App) loadFilterCandidateInfo() tea.Cmd {
+	af := filter.Parse(a.advancedFilter)
+	if !af.NeedsMetadata() {
+		return nil
+	}
+
+	var names []string
+	for _, p := range a.allPackages {
+		// Skip packages already cached
+		if _, ok := a.infoCache[p.Name]; ok {
+			continue
+		}
+		// Skip packages that already have metadata populated
+		if p.Section != "" || p.Architecture != "" || p.Size != "" {
+			continue
+		}
+		// Only load metadata for packages that pass the non-metadata filters
+		pd := filter.PackageData{
+			Name:        p.Name,
+			Version:     p.Version,
+			NewVersion:  p.NewVersion,
+			Description: p.Description,
+			Installed:   p.Installed,
+			Upgradable:  p.Upgradable,
+		}
+		if af.MatchWithoutMetadata(pd) {
+			names = append(names, p.Name)
+		}
+	}
+	if len(names) == 0 {
+		return nil
+	}
+	return func() tea.Msg {
+		info := apt.BatchGetInfo(names)
+		return infoLoadedMsg{info: info}
+	}
 }
 
 // preloadVisiblePackageInfo fetches version/size info for packages near the visible

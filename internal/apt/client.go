@@ -12,7 +12,7 @@ import (
 
 func ListInstalled() ([]model.Package, error) {
 	cmd := exec.Command("dpkg-query", "-W",
-		"-f=${Package}\t${Version}\t${Installed-Size}\t${Description}\n")
+		"-f=${Package}\t${Version}\t${Installed-Size}\t${Description}\t${Section}\t${Architecture}\n")
 	var out bytes.Buffer
 	var stderr bytes.Buffer
 	cmd.Stdout = &out
@@ -109,8 +109,10 @@ func IsInstalled(name string) bool {
 }
 
 type PackageInfo struct {
-	Version string
-	Size    string
+	Version      string
+	Size         string
+	Section      string
+	Architecture string
 }
 
 func BatchGetInfo(names []string) map[string]PackageInfo {
@@ -174,20 +176,26 @@ func getShowInfo(names []string) map[string]PackageInfo {
 	var curPkg string
 	var curVer string
 	var curSize string
+	var curSection string
+	var curArch string
 
 	flush := func() {
 		if curPkg != "" {
 			// Keep only the first entry per package (candidate version)
 			if _, exists := info[curPkg]; !exists {
 				info[curPkg] = PackageInfo{
-					Version: curVer,
-					Size:    formatSize(curSize),
+					Version:      curVer,
+					Size:         formatSize(curSize),
+					Section:      curSection,
+					Architecture: curArch,
 				}
 			}
 		}
 		curPkg = ""
 		curVer = ""
 		curSize = ""
+		curSection = ""
+		curArch = ""
 	}
 
 	for _, line := range strings.Split(out.String(), "\n") {
@@ -201,6 +209,10 @@ func getShowInfo(names []string) map[string]PackageInfo {
 			curVer = strings.TrimPrefix(line, "Version: ")
 		} else if strings.HasPrefix(line, "Installed-Size: ") {
 			curSize = strings.TrimPrefix(line, "Installed-Size: ")
+		} else if strings.HasPrefix(line, "Section: ") {
+			curSection = strings.TrimPrefix(line, "Section: ")
+		} else if strings.HasPrefix(line, "Architecture: ") {
+			curArch = strings.TrimPrefix(line, "Architecture: ")
 		}
 	}
 	flush() // last entry
@@ -210,7 +222,7 @@ func getShowInfo(names []string) map[string]PackageInfo {
 
 // ParseShowEntry parses a single apt-cache show output and returns PackageInfo.
 func ParseShowEntry(info string) PackageInfo {
-	var ver, size string
+	var ver, size, section, arch string
 	for _, line := range strings.Split(info, "\n") {
 		if line == "" && ver != "" {
 			break // only first entry
@@ -219,11 +231,17 @@ func ParseShowEntry(info string) PackageInfo {
 			ver = strings.TrimPrefix(line, "Version: ")
 		} else if strings.HasPrefix(line, "Installed-Size: ") {
 			size = strings.TrimPrefix(line, "Installed-Size: ")
+		} else if strings.HasPrefix(line, "Section: ") {
+			section = strings.TrimPrefix(line, "Section: ")
+		} else if strings.HasPrefix(line, "Architecture: ") {
+			arch = strings.TrimPrefix(line, "Architecture: ")
 		}
 	}
 	return PackageInfo{
-		Version: ver,
-		Size:    formatSize(size),
+		Version:      ver,
+		Size:         formatSize(size),
+		Section:      section,
+		Architecture: arch,
 	}
 }
 
