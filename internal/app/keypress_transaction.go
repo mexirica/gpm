@@ -126,16 +126,18 @@ func (a App) redoTransaction() (tea.Model, tea.Cmd) {
 	}
 	tx := a.transactionItems[a.transactionIdx]
 	var cmds []tea.Cmd
-	for _, pkg := range tx.Packages {
-		switch tx.Operation {
-		case history.OpInstall:
-			cmds = append(cmds, installPackageCmd(pkg))
-		case history.OpRemove:
-			cmds = append(cmds, removePackageCmd(pkg))
-		case history.OpUpgrade:
-			cmds = append(cmds, upgradePackageCmd(pkg))
-		case history.OpUpgradeAll:
-			cmds = append(cmds, upgradeAllPackagesCmd())
+	if tx.Operation == history.OpUpgradeAll {
+		cmds = append(cmds, upgradeAllPackagesCmd())
+	} else {
+		for _, pkg := range tx.Packages {
+			switch tx.Operation {
+			case history.OpInstall:
+				cmds = append(cmds, installPackageCmd(pkg))
+			case history.OpRemove:
+				cmds = append(cmds, removePackageCmd(pkg))
+			case history.OpUpgrade:
+				cmds = append(cmds, upgradePackageCmd(pkg))
+			}
 		}
 	}
 	a.pendingExecOp = string(tx.Operation)

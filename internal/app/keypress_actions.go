@@ -274,11 +274,19 @@ func (a App) upgradeSelectedPackages() (tea.Model, tea.Cmd) {
 }
 
 func (a App) upgradeAllPackages() (tea.Model, tea.Cmd) {
+	var names []string
+	for name := range a.upgradableMap {
+		names = append(names, name)
+	}
+	if len(names) == 0 {
+		a.status = "No upgradable packages found."
+		return a, nil
+	}
 	a.pendingExecOp = "upgrade-all"
-	a.pendingExecPkgs = []string{"all"}
+	a.pendingExecPkgs = names
 	a.pendingExecCount = 1
 	a.loading = true
-	a.status = "Upgrading ALL packages (sudo apt-get dist-upgrade)..."
+	a.status = fmt.Sprintf("Upgrading %d packages (sudo apt-get dist-upgrade)...", len(names))
 	return a, upgradeAllPackagesCmd()
 }
 
