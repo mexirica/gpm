@@ -146,139 +146,123 @@ func (a App) dispatchPackageAction(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
 }
 
 func (a App) installSelectedPackages() (tea.Model, tea.Cmd) {
+	var names []string
 	if len(a.selected) > 0 {
-		var cmds []tea.Cmd
-		var names []string
 		for name := range a.selected {
-			cmds = append(cmds, installPackageCmd(name))
-			names = append(names, name)
+			 names = append(names, name)
 		}
-		a.pendingExecOp = "install"
-		a.pendingExecPkgs = names
-		a.pendingExecCount = len(cmds)
-		a.loading = true
-		a.status = fmt.Sprintf("Installing %d packages...", len(cmds))
-		a.selected = make(map[string]bool)
-		return a, tea.Batch(cmds...)
-	}
-	if len(a.filtered) > 0 && a.selectedIdx < len(a.filtered) {
+	} else if len(a.filtered) > 0 && a.selectedIdx < len(a.filtered) {
 		pkg := a.filtered[a.selectedIdx]
 		if pkg.Installed {
-			a.status = fmt.Sprintf("'%s' is already installed.", pkg.Name)
-			return a, nil
+			 a.status = fmt.Sprintf("'%s' is already installed.", pkg.Name)
+			 return a, nil
 		}
-		a.pendingExecOp = "install"
-		a.pendingExecPkgs = []string{pkg.Name}
-		a.pendingExecCount = 1
-		a.loading = true
-		a.status = fmt.Sprintf("Installing %s...", pkg.Name)
-		return a, installPackageCmd(pkg.Name)
+		names = append(names, pkg.Name)
 	}
-	return a, nil
+	if len(names) == 0 {
+		return a, nil
+	}
+	a.pendingExecOp = "install"
+	a.pendingExecPkgs = names
+	a.pendingExecCount = 1
+	a.loading = true
+	a.status = fmt.Sprintf("Installing %d packages...", len(names))
+	a.selected = make(map[string]bool)
+	return a, installBatchCmd(names)
 }
 
 func (a App) removeSelectedPackages() (tea.Model, tea.Cmd) {
+	var names []string
 	if len(a.selected) > 0 {
-		var cmds []tea.Cmd
-		var names []string
 		for name := range a.selected {
-			cmds = append(cmds, removePackageCmd(name))
-			names = append(names, name)
+			 names = append(names, name)
 		}
-		a.pendingExecOp = "remove"
-		a.pendingExecPkgs = names
-		a.pendingExecCount = len(cmds)
-		a.loading = true
-		a.status = fmt.Sprintf("Removing %d packages...", len(cmds))
-		a.selected = make(map[string]bool)
-		return a, tea.Batch(cmds...)
-	}
-	if len(a.filtered) > 0 && a.selectedIdx < len(a.filtered) {
+	} else if len(a.filtered) > 0 && a.selectedIdx < len(a.filtered) {
 		pkg := a.filtered[a.selectedIdx]
 		if !pkg.Installed {
-			a.status = fmt.Sprintf("'%s' is not installed.", pkg.Name)
-			return a, nil
+			 a.status = fmt.Sprintf("'%s' is not installed.", pkg.Name)
+			 return a, nil
 		}
-		a.pendingExecOp = "remove"
-		a.pendingExecPkgs = []string{pkg.Name}
-		a.pendingExecCount = 1
-		a.loading = true
-		a.status = fmt.Sprintf("Removing %s...", pkg.Name)
-		return a, removePackageCmd(pkg.Name)
+		names = append(names, pkg.Name)
 	}
-	return a, nil
+	if len(names) == 0 {
+		return a, nil
+	}
+	a.pendingExecOp = "remove"
+	a.pendingExecPkgs = names
+	a.pendingExecCount = 1
+	a.loading = true
+	a.status = fmt.Sprintf("Removing %d packages...", len(names))
+	a.selected = make(map[string]bool)
+	return a, removeBatchCmd(names)
 }
 
 func (a App) purgeSelectedPackages() (tea.Model, tea.Cmd) {
+	var names []string
 	if len(a.selected) > 0 {
-		var cmds []tea.Cmd
-		var names []string
 		for name := range a.selected {
-			cmds = append(cmds, purgePackageCmd(name))
-			names = append(names, name)
+			 names = append(names, name)
 		}
-		a.pendingExecOp = "purge"
-		a.pendingExecPkgs = names
-		a.pendingExecCount = len(cmds)
-		a.loading = true
-		a.status = fmt.Sprintf("Purging %d packages...", len(cmds))
-		a.selected = make(map[string]bool)
-		return a, tea.Batch(cmds...)
-	}
-	if len(a.filtered) > 0 && a.selectedIdx < len(a.filtered) {
+	} else if len(a.filtered) > 0 && a.selectedIdx < len(a.filtered) {
 		pkg := a.filtered[a.selectedIdx]
 		if !pkg.Installed {
-			a.status = fmt.Sprintf("'%s' is not installed.", pkg.Name)
-			return a, nil
+			 a.status = fmt.Sprintf("'%s' is not installed.", pkg.Name)
+			 return a, nil
 		}
-		a.pendingExecOp = "purge"
-		a.pendingExecPkgs = []string{pkg.Name}
-		a.pendingExecCount = 1
-		a.loading = true
-		a.status = fmt.Sprintf("Purging %s...", pkg.Name)
-		return a, purgePackageCmd(pkg.Name)
+		names = append(names, pkg.Name)
 	}
-	return a, nil
+	if len(names) == 0 {
+		return a, nil
+	}
+	a.pendingExecOp = "purge"
+	a.pendingExecPkgs = names
+	a.pendingExecCount = 1
+	a.loading = true
+	a.status = fmt.Sprintf("Purging %d packages...", len(names))
+	a.selected = make(map[string]bool)
+	return a, purgeBatchCmd(names)
 }
 
 func (a App) upgradeSelectedPackages() (tea.Model, tea.Cmd) {
+	var names []string
 	if len(a.selected) > 0 {
-		var cmds []tea.Cmd
-		var names []string
 		for name := range a.selected {
-			cmds = append(cmds, upgradePackageCmd(name))
-			names = append(names, name)
+			 names = append(names, name)
 		}
-		a.pendingExecOp = "upgrade"
-		a.pendingExecPkgs = names
-		a.pendingExecCount = len(cmds)
-		a.loading = true
-		a.status = fmt.Sprintf("Upgrading %d packages...", len(cmds))
-		a.selected = make(map[string]bool)
-		return a, tea.Batch(cmds...)
-	}
-	if len(a.filtered) > 0 && a.selectedIdx < len(a.filtered) {
+	} else if len(a.filtered) > 0 && a.selectedIdx < len(a.filtered) {
 		pkg := a.filtered[a.selectedIdx]
 		if !pkg.Upgradable {
-			a.status = fmt.Sprintf("'%s' is already at the latest version.", pkg.Name)
-			return a, nil
+			 a.status = fmt.Sprintf("'%s' is already at the latest version.", pkg.Name)
+			 return a, nil
 		}
-		a.pendingExecOp = "upgrade"
-		a.pendingExecPkgs = []string{pkg.Name}
-		a.pendingExecCount = 1
-		a.loading = true
-		a.status = fmt.Sprintf("Upgrading %s...", pkg.Name)
-		return a, upgradePackageCmd(pkg.Name)
+		names = append(names, pkg.Name)
 	}
-	return a, nil
+	if len(names) == 0 {
+		return a, nil
+	}
+	a.pendingExecOp = "upgrade"
+	a.pendingExecPkgs = names
+	a.pendingExecCount = 1
+	a.loading = true
+	a.status = fmt.Sprintf("Upgrading %d packages...", len(names))
+	a.selected = make(map[string]bool)
+	return a, upgradeBatchCmd(names)
 }
 
 func (a App) upgradeAllPackages() (tea.Model, tea.Cmd) {
+	var names []string
+	for name := range a.upgradableMap {
+		names = append(names, name)
+	}
+	if len(names) == 0 {
+		a.status = "No upgradable packages found."
+		return a, nil
+	}
 	a.pendingExecOp = "upgrade-all"
-	a.pendingExecPkgs = []string{"all"}
+	a.pendingExecPkgs = names
 	a.pendingExecCount = 1
 	a.loading = true
-	a.status = "Upgrading ALL packages (sudo apt-get dist-upgrade)..."
+	a.status = fmt.Sprintf("Upgrading %d packages (sudo apt-get dist-upgrade)...", len(names))
 	return a, upgradeAllPackagesCmd()
 }
 

@@ -1,12 +1,21 @@
 package app
 
 import (
+	"strings"
+
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/mexirica/aptui/internal/apt"
 	"github.com/mexirica/aptui/internal/fetch"
 	"github.com/mexirica/aptui/internal/model"
 )
+
+func purgeBatchCmd(names []string) tea.Cmd {
+	cmd := apt.PurgeBatchCmd(names)
+	return tea.ExecProcess(cmd, func(err error) tea.Msg {
+		return execFinishedMsg{op: "purge", name: strings.Join(names, " "), err: err}
+	})
+}
 
 func loadAllPackageNamesCmd() tea.Cmd {
 	return func() tea.Msg {
@@ -93,36 +102,31 @@ func loadTransactionDepsCmd(txIdx int, packages []string) tea.Cmd {
 	}
 }
 
-func installPackageCmd(name string) tea.Cmd {
-	cmd := apt.ParallelInstallCmd(name)
-	return tea.ExecProcess(cmd, func(err error) tea.Msg {
-		return execFinishedMsg{op: "install", name: name, err: err}
-	})
-}
-
-func removePackageCmd(name string) tea.Cmd {
-	return tea.ExecProcess(apt.RemoveCmd(name), func(err error) tea.Msg {
-		return execFinishedMsg{op: "remove", name: name, err: err}
-	})
-}
-
-func purgePackageCmd(name string) tea.Cmd {
-	return tea.ExecProcess(apt.PurgeCmd(name), func(err error) tea.Msg {
-		return execFinishedMsg{op: "purge", name: name, err: err}
-	})
-}
-
-func upgradePackageCmd(name string) tea.Cmd {
-	cmd := apt.ParallelUpgradeCmd(name)
-	return tea.ExecProcess(cmd, func(err error) tea.Msg {
-		return execFinishedMsg{op: "upgrade", name: name, err: err}
-	})
-}
-
 func upgradeAllPackagesCmd() tea.Cmd {
-	cmd := apt.ParallelUpgradeAllCmd()
+	cmd := apt.UpgradeAllCmd()
 	return tea.ExecProcess(cmd, func(err error) tea.Msg {
 		return execFinishedMsg{op: "upgrade-all", name: "all", err: err}
+	})
+}
+
+func installBatchCmd(names []string) tea.Cmd {
+	cmd := apt.InstallBatchCmd(names)
+	return tea.ExecProcess(cmd, func(err error) tea.Msg {
+		return execFinishedMsg{op: "install", name: strings.Join(names, " "), err: err}
+	})
+}
+
+func removeBatchCmd(names []string) tea.Cmd {
+	cmd := apt.RemoveBatchCmd(names)
+	return tea.ExecProcess(cmd, func(err error) tea.Msg {
+		return execFinishedMsg{op: "remove", name: strings.Join(names, " "), err: err}
+	})
+}
+
+func upgradeBatchCmd(names []string) tea.Cmd {
+	cmd := apt.UpgradeBatchCmd(names)
+	return tea.ExecProcess(cmd, func(err error) tea.Msg {
+		return execFinishedMsg{op: "upgrade", name: strings.Join(names, " "), err: err}
 	})
 }
 

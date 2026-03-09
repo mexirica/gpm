@@ -101,23 +101,25 @@ func (a App) undoTransaction() (tea.Model, tea.Cmd) {
 		a.status = ui.ErrorStyle.Render("Cannot undo a failed transaction.")
 		return a, nil
 	}
+	if tx.Operation == history.OpUpgradeAll || tx.Operation == history.OpUpgrade {
+		a.status = ui.ErrorStyle.Render("Cannot undo upgrade: downgrade is not supported.")
+		return a, nil
+	}
 	undoOp := history.UndoOperation(tx.Operation)
-	var cmds []tea.Cmd
-	for _, pkg := range tx.Packages {
-		switch undoOp {
-		case history.OpRemove:
-			cmds = append(cmds, removePackageCmd(pkg))
-		case history.OpInstall:
-			cmds = append(cmds, installPackageCmd(pkg))
-		}
+	var cmd tea.Cmd
+	switch undoOp {
+	case history.OpRemove:
+		cmd = removeBatchCmd(tx.Packages)
+	case history.OpInstall:
+		cmd = installBatchCmd(tx.Packages)
 	}
 	a.pendingExecOp = string(undoOp)
 	a.pendingExecPkgs = tx.Packages
-	a.pendingExecCount = len(cmds)
+	a.pendingExecCount = 1
 	a.transactionView = false
 	a.loading = true
 	a.status = fmt.Sprintf("Undoing #%d (%s %d packages)...", tx.ID, undoOp, len(tx.Packages))
-	return a, tea.Batch(cmds...)
+	return a, cmd
 }
 
 func (a App) redoTransaction() (tea.Model, tea.Cmd) {
@@ -125,24 +127,22 @@ func (a App) redoTransaction() (tea.Model, tea.Cmd) {
 		return a, nil
 	}
 	tx := a.transactionItems[a.transactionIdx]
-	var cmds []tea.Cmd
-	for _, pkg := range tx.Packages {
-		switch tx.Operation {
-		case history.OpInstall:
-			cmds = append(cmds, installPackageCmd(pkg))
-		case history.OpRemove:
-			cmds = append(cmds, removePackageCmd(pkg))
-		case history.OpUpgrade:
-			cmds = append(cmds, upgradePackageCmd(pkg))
-		case history.OpUpgradeAll:
-			cmds = append(cmds, upgradeAllPackagesCmd())
-		}
+	var cmd tea.Cmd
+	switch tx.Operation {
+	case history.OpUpgradeAll:
+		cmd = upgradeAllPackagesCmd()
+	case history.OpInstall:
+		cmd = installBatchCmd(tx.Packages)
+	case history.OpRemove:
+		cmd = removeBatchCmd(tx.Packages)
+	case history.OpUpgrade:
+		cmd = upgradeBatchCmd(tx.Packages)
 	}
 	a.pendingExecOp = string(tx.Operation)
 	a.pendingExecPkgs = tx.Packages
-	a.pendingExecCount = len(cmds)
+	a.pendingExecCount = 1
 	a.transactionView = false
 	a.loading = true
 	a.status = fmt.Sprintf("Redoing #%d (%s %d packages)...", tx.ID, tx.Operation, len(tx.Packages))
-	return a, tea.Batch(cmds...)
+	return a, cmd
 }
