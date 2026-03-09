@@ -102,26 +102,6 @@ func loadTransactionDepsCmd(txIdx int, packages []string) tea.Cmd {
 	}
 }
 
-func installPackageCmd(name string) tea.Cmd {
-	cmd := apt.InstallCmd(name)
-	return tea.ExecProcess(cmd, func(err error) tea.Msg {
-		return execFinishedMsg{op: "install", name: name, err: err}
-	})
-}
-
-func removePackageCmd(name string) tea.Cmd {
-	return tea.ExecProcess(apt.RemoveCmd(name), func(err error) tea.Msg {
-		return execFinishedMsg{op: "remove", name: name, err: err}
-	})
-}
-
-func upgradePackageCmd(name string) tea.Cmd {
-	cmd := apt.UpgradeCmd(name)
-	return tea.ExecProcess(cmd, func(err error) tea.Msg {
-		return execFinishedMsg{op: "upgrade", name: name, err: err}
-	})
-}
-
 func upgradeAllPackagesCmd() tea.Cmd {
 	cmd := apt.UpgradeAllCmd()
 	return tea.ExecProcess(cmd, func(err error) tea.Msg {
