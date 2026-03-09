@@ -94,6 +94,7 @@ aptui
 | `r` | Remove package (or all selected) |
 | `u` | Upgrade package (or all selected) |
 | `G` | Upgrade all packages (`apt-get upgrade`) |
+| `p` | Purge package (or all selected) |
 | `ctrl+r` | Refresh package list |
 
 ### History & Mirrors
