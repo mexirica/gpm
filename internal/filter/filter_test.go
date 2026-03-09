@@ -264,3 +264,136 @@ func TestFilterIsEmpty(t *testing.T) {
 		t.Error("filter with installed flag should not be empty")
 	}
 }
+
+func TestParseOrderByNameAsc(t *testing.T) {
+	f := Parse("order:name")
+	if f.OrderBy != SortName {
+		t.Errorf("expected SortName, got %d", f.OrderBy)
+	}
+	if f.OrderDesc {
+		t.Error("expected ascending order by default")
+	}
+}
+
+func TestParseOrderByNameDesc(t *testing.T) {
+	f := Parse("order:name:desc")
+	if f.OrderBy != SortName {
+		t.Errorf("expected SortName, got %d", f.OrderBy)
+	}
+	if !f.OrderDesc {
+		t.Error("expected descending order")
+	}
+}
+
+func TestParseOrderBySizeAsc(t *testing.T) {
+	f := Parse("order:size:asc")
+	if f.OrderBy != SortSize {
+		t.Errorf("expected SortSize, got %d", f.OrderBy)
+	}
+	if f.OrderDesc {
+		t.Error("expected ascending order")
+	}
+}
+
+func TestParseOrderByVersionDesc(t *testing.T) {
+	f := Parse("order:ver:desc")
+	if f.OrderBy != SortVersion {
+		t.Errorf("expected SortVersion, got %d", f.OrderBy)
+	}
+	if !f.OrderDesc {
+		t.Error("expected descending order")
+	}
+}
+
+func TestParseOrderCombinedWithFilter(t *testing.T) {
+	f := Parse("installed order:size:desc")
+	if f.Installed == nil || !*f.Installed {
+		t.Error("expected installed=true")
+	}
+	if f.OrderBy != SortSize {
+		t.Errorf("expected SortSize, got %d", f.OrderBy)
+	}
+	if !f.OrderDesc {
+		t.Error("expected descending order")
+	}
+}
+
+func TestParseOrderIsNotEmpty(t *testing.T) {
+	f := Parse("order:name")
+	if f.IsEmpty() {
+		t.Error("filter with order should not be empty")
+	}
+}
+
+func TestDescribeWithOrder(t *testing.T) {
+	f := Parse("order:name:desc")
+	desc := f.Describe()
+	if desc != "order:name:desc" {
+		t.Errorf("expected 'order:name:desc', got '%s'", desc)
+	}
+}
+
+func TestSortByNameAsc(t *testing.T) {
+	pkgs := []PackageData{
+		{Name: "zsh"},
+		{Name: "apt"},
+		{Name: "nano"},
+	}
+	f := Filter{OrderBy: SortName}
+	Sort(pkgs, f)
+	if pkgs[0].Name != "apt" || pkgs[1].Name != "nano" || pkgs[2].Name != "zsh" {
+		t.Errorf("unexpected order: %s, %s, %s", pkgs[0].Name, pkgs[1].Name, pkgs[2].Name)
+	}
+}
+
+func TestSortByNameDesc(t *testing.T) {
+	pkgs := []PackageData{
+		{Name: "apt"},
+		{Name: "zsh"},
+		{Name: "nano"},
+	}
+	f := Filter{OrderBy: SortName, OrderDesc: true}
+	Sort(pkgs, f)
+	if pkgs[0].Name != "zsh" || pkgs[1].Name != "nano" || pkgs[2].Name != "apt" {
+		t.Errorf("unexpected order: %s, %s, %s", pkgs[0].Name, pkgs[1].Name, pkgs[2].Name)
+	}
+}
+
+func TestSortBySizeAsc(t *testing.T) {
+	pkgs := []PackageData{
+		{Name: "big", Size: "10.0 MB"},
+		{Name: "small", Size: "100 kB"},
+		{Name: "med", Size: "1.0 MB"},
+	}
+	f := Filter{OrderBy: SortSize}
+	Sort(pkgs, f)
+	if pkgs[0].Name != "small" || pkgs[1].Name != "med" || pkgs[2].Name != "big" {
+		t.Errorf("unexpected order: %s, %s, %s", pkgs[0].Name, pkgs[1].Name, pkgs[2].Name)
+	}
+}
+
+func TestSortBySizeDesc(t *testing.T) {
+	pkgs := []PackageData{
+		{Name: "big", Size: "10.0 MB"},
+		{Name: "small", Size: "100 kB"},
+		{Name: "med", Size: "1.0 MB"},
+	}
+	f := Filter{OrderBy: SortSize, OrderDesc: true}
+	Sort(pkgs, f)
+	if pkgs[0].Name != "big" || pkgs[1].Name != "med" || pkgs[2].Name != "small" {
+		t.Errorf("unexpected order: %s, %s, %s", pkgs[0].Name, pkgs[1].Name, pkgs[2].Name)
+	}
+}
+
+func TestSortNoneDoesNothing(t *testing.T) {
+	pkgs := []PackageData{
+		{Name: "zsh"},
+		{Name: "apt"},
+		{Name: "nano"},
+	}
+	f := Filter{OrderBy: SortNone}
+	Sort(pkgs, f)
+	if pkgs[0].Name != "zsh" || pkgs[1].Name != "apt" || pkgs[2].Name != "nano" {
+		t.Errorf("SortNone should not change order: %s, %s, %s", pkgs[0].Name, pkgs[1].Name, pkgs[2].Name)
+	}
+}

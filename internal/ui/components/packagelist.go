@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/mexirica/aptui/internal/filter"
 	"github.com/mexirica/aptui/internal/model"
 )
 
@@ -34,7 +35,7 @@ var (
 			Foreground(lipgloss.Color("#4A4A5A"))
 )
 
-func RenderPackageList(packages []model.Package, selected int, offset int, maxVisible int, width int, selectedSet map[string]bool) string {
+func RenderPackageList(packages []model.Package, selected int, offset int, maxVisible int, width int, selectedSet map[string]bool, sortCol ...filter.SortInfo) string {
 	if len(packages) == 0 {
 		return lipgloss.NewStyle().Foreground(lipgloss.Color("#6C6C6C")).
 			Render("\n  No packages found.\n")
@@ -61,26 +62,55 @@ func RenderPackageList(packages []model.Package, selected int, offset int, maxVi
 	}
 
 	headerStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#7D56F4"))
+	sortIndicatorStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#FFC107"))
+
+	// Determine sort indicator
+	var si filter.SortInfo
+	if len(sortCol) > 0 {
+		si = sortCol[0]
+	}
+	sortArrow := func(col filter.SortColumn) string {
+		if si.Column == col && col != filter.SortNone {
+			if si.Desc {
+				return " " + sortIndicatorStyle.Render("▼")
+			}
+			return " " + sortIndicatorStyle.Render("▲")
+		}
+		return ""
+	}
 
 	var b strings.Builder
 
+	nameArrow := sortArrow(filter.SortName)
+	versionArrow := sortArrow(filter.SortVersion)
+	sizeArrow := sortArrow(filter.SortSize)
+
 	padName := colName - 4
+	if nameArrow != "" {
+		padName -= 2 // arrow + space
+	}
 	if padName < 0 {
 		padName = 0
 	}
 	padVer := colVersion - 7
+	if versionArrow != "" {
+		padVer -= 2
+	}
 	if padVer < 0 {
 		padVer = 0
 	}
 	padSize := colSize - 4
+	if sizeArrow != "" {
+		padSize -= 2
+	}
 	if padSize < 0 {
 		padSize = 0
 	}
-	header := fmt.Sprintf("%s%s%s  %s%s  %s%s",
+	header := fmt.Sprintf("%s%s%s%s  %s%s%s  %s%s%s",
 		strings.Repeat(" ", prefixW),
-		headerStyle.Render("Name"), strings.Repeat(" ", padName),
-		headerStyle.Render("Version"), strings.Repeat(" ", padVer),
-		strings.Repeat(" ", padSize), headerStyle.Render("Size"))
+		headerStyle.Render("Name"), nameArrow, strings.Repeat(" ", padName),
+		headerStyle.Render("Version"), versionArrow, strings.Repeat(" ", padVer),
+		strings.Repeat(" ", padSize), headerStyle.Render("Size"), sizeArrow)
 	b.WriteString(header + "\n")
 	b.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#7D56F4")).Render(strings.Repeat("─", width)) + "\n")
 

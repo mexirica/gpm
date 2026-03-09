@@ -151,6 +151,63 @@ name:python sec:python arch:amd64 installed
 
 ---
 
+## Sorting (order)
+
+You can sort the results by a column using the `order:` syntax:
+
+```
+order:<column>           → sort ascending (default)
+order:<column>:asc       → sort ascending (explicit)
+order:<column>:desc      → sort descending
+```
+
+### Available columns
+
+| Column          | Aliases | Description                        |
+|-----------------|---------|------------------------------------|
+| `name`          | —       | Sort by package name               |
+| `version`       | `ver`   | Sort by version string             |
+| `size`          | —       | Sort by installed size             |
+| `section`       | `sec`   | Sort by section                    |
+| `architecture`  | `arch`  | Sort by architecture               |
+
+**Examples:**
+
+```
+order:name               → sort by name A→Z
+order:name:desc          → sort by name Z→A
+order:size:desc          → largest packages first
+order:size:asc           → smallest packages first
+order:ver:desc           → newest versions first
+```
+
+### Combining sort with filters
+
+Sort can be combined with any other filter:
+
+```
+installed order:size:desc
+```
+→ Installed packages, largest first
+
+```
+section:utils order:name
+```
+→ Packages in "utils" section, sorted by name A→Z
+
+```
+!installed size>10MB order:size:desc
+```
+→ Not-installed packages larger than 10 MB, largest first
+
+> **Note:** When a sort is active, the column header in the package list shows ▲ (ascending) or ▼ (descending).
+
+### Unknown data handling
+
+Packages whose metadata hasn't been loaded yet (showing "-" for version or size) are always pushed to the **end** of the sorted list, regardless of sort direction. This ensures that packages with real data are always visible first.
+
+---
+
 ## Combining filter with search
 
 The advanced filter (`Shift+F`) works **together** with text search (`/`). You can:

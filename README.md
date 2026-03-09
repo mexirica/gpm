@@ -19,6 +19,8 @@ Built with [Bubble Tea](https://github.com/charmbracelet/bubbletea), [Lip Gloss]
 
 - **Browse all packages** — lists every available APT package with version and size info loaded lazily
 - **Fuzzy search** — live fuzzy filtering as you type, with fallback to `apt-cache search`
+- **Advanced filter** — powerful query language to filter by section, architecture, size, status and more ([docs](docs/filter.md))
+- **Column sorting** — sort packages by name, version, size, section or architecture (ascending/descending)
 - **Tabs** — switch between *All*, *Installed* and *Upgradable* views
 - **Multi-select** — mark multiple packages with `space`, then bulk install/remove/upgrade
 - **Parallel downloads** — installs and upgrades use parallel downloads by default for faster operations
@@ -71,14 +73,25 @@ aptui
 | `pgdown` / `ctrl+d` | Page down |
 | `tab` | Switch tab (All → Installed → Upgradable) |
 
-### Search
+### Search & Filter
 
 | Key | Action |
 |---|---|
 | `/` | Open search bar |
-| `F` | Open filter bar |
-| `enter` | Confirm search |
-| `esc` | Clear search / go back |
+| `F` | Open [advanced filter](docs/filter.md) bar |
+| `enter` | Confirm search / apply filter |
+| `esc` | Clear search / filter / go back |
+
+#### Filter examples
+
+```
+installed size>10MB          # installed packages larger than 10 MB
+section:utils order:name     # packages in "utils" section, sorted A→Z
+order:size:desc              # all packages sorted by size, largest first
+order:size:asc               # all packages sorted by size, smallest first
+```
+
+See the full [filter documentation](docs/filter.md) for all available options.
 
 ### Selection
 
