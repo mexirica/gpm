@@ -2,6 +2,9 @@
 
 **aptui** includes an advanced filter system that lets you build queries to find exactly the packages you need. You can combine multiple criteria to refine results.
 
+<p align="center">
+    <img src="../assets/filter.gif" alt="Mirror testing" width="900" />
+</p>
 ---
 
 ## Opening the filter
