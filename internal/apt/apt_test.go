@@ -202,3 +202,41 @@ func TestPackageModelFields(t *testing.T) {
 		t.Errorf("expected new version 2.0, got %s", pkg.NewVersion)
 	}
 }
+
+func TestParseDpkgOutputDeduplicatesMultiArch(t *testing.T) {
+	input := `libc6	2.39-0ubuntu8	14000	GNU C Library	libs	amd64
+libc6	2.39-0ubuntu8	7000	GNU C Library	libs	i386
+vim	8.2.4919	9876	Vi IMproved	editors	amd64
+`
+	pkgs := parseDpkgOutput(input, true)
+	if len(pkgs) != 2 {
+		t.Fatalf("expected 2 packages (deduped), got %d", len(pkgs))
+	}
+	if pkgs[0].Name != "libc6" {
+		t.Errorf("expected first package 'libc6', got '%s'", pkgs[0].Name)
+	}
+	if pkgs[0].Architecture != "amd64" {
+		t.Errorf("expected architecture 'amd64', got '%s'", pkgs[0].Architecture)
+	}
+	if pkgs[1].Name != "vim" {
+		t.Errorf("expected second package 'vim', got '%s'", pkgs[1].Name)
+	}
+}
+
+func TestParseUpgradableOutputDeduplicatesMultiArch(t *testing.T) {
+	input := `Listing... Done
+libc6/noble 2.39-1 amd64 [upgradable from: 2.39-0]
+libc6/noble 2.39-1 i386 [upgradable from: 2.39-0]
+vim/noble 2:9.1.0-1 amd64 [upgradable from: 2:8.2.4919-1]`
+
+	pkgs := parseUpgradableOutput(input)
+	if len(pkgs) != 2 {
+		t.Fatalf("expected 2 packages (deduped), got %d", len(pkgs))
+	}
+	if pkgs[0].Name != "libc6" {
+		t.Errorf("expected 'libc6', got '%s'", pkgs[0].Name)
+	}
+	if pkgs[1].Name != "vim" {
+		t.Errorf("expected 'vim', got '%s'", pkgs[1].Name)
+	}
+}
