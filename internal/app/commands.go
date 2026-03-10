@@ -17,12 +17,6 @@ func purgeBatchCmd(names []string) tea.Cmd {
 	})
 }
 
-func loadAllPackageNamesCmd() tea.Cmd {
-	return func() tea.Msg {
-		names, err := apt.ListAllNames()
-		return allNamesMsg{names: names, err: err}
-	}
-}
 
 func reloadAllPackages() tea.Msg {
 	type namesResult struct {

@@ -30,9 +30,6 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case initialLoadMsg:
 		return a.onInitialLoad(msg)
 
-	case allNamesMsg:
-		return a.onAllNamesLoaded(msg)
-
 	case allPackagesMsg:
 		return a.onAllPackagesLoaded(msg)
 
@@ -119,47 +116,6 @@ func (a App) onInitialLoad(msg initialLoadMsg) (tea.Model, tea.Cmd) {
 	}
 	cmds = append(cmds, silentUpdateCmd())
 	return a, tea.Sequence(cmds...)
-}
-
-func (a App) onAllNamesLoaded(msg allNamesMsg) (tea.Model, tea.Cmd) {
-	if msg.err != nil {
-		a.allNamesLoaded = true
-		a.status = fmt.Sprintf("%d installed (%d upgradable) ",
-			a.installedCount, len(a.upgradableMap))
-		return a, nil
-	}
-	a.allNamesLoaded = true
-	seen := make(map[string]bool, len(a.allPackages))
-	for _, p := range a.allPackages {
-		seen[p.Name] = true
-	}
-	for _, name := range msg.names {
-		if !seen[name] {
-			pkg := model.Package{Name: name, Installed: false}
-			if info, ok := a.infoCache[name]; ok {
-				pkg.NewVersion = info.Version
-				pkg.Size = info.Size
-				pkg.Section = info.Section
-				pkg.Architecture = info.Architecture
-			}
-			a.allPackages = append(a.allPackages, pkg)
-			seen[name] = true
-		}
-	}
-	prevIdx := a.selectedIdx
-	prevOffset := a.scrollOffset
-	a.applyFilter()
-	a.selectedIdx = prevIdx
-	a.scrollOffset = prevOffset
-	if a.selectedIdx >= len(a.filtered) {
-		a.selectedIdx = len(a.filtered) - 1
-		if a.selectedIdx < 0 {
-			a.selectedIdx = 0
-		}
-	}
-	a.status = fmt.Sprintf("%d packages (%d installed, %d upgradable) ",
-		len(a.allPackages), a.installedCount, len(a.upgradableMap))
-	return a, tea.Batch(a.preloadVisiblePackageInfo())
 }
 
 func (a App) onAllPackagesLoaded(msg allPackagesMsg) (tea.Model, tea.Cmd) {

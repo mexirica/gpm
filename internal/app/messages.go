@@ -12,11 +12,6 @@ type initialLoadMsg struct {
 	err        error
 }
 
-type allNamesMsg struct {
-	names []string
-	err   error
-}
-
 type allPackagesMsg struct {
 	allNames   []string
 	installed  []model.Package

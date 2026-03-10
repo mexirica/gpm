@@ -464,32 +464,6 @@ func TestInitialLoadMsgError(t *testing.T) {
 	}
 }
 
-func TestAllNamesMsg(t *testing.T) {
-	a := newTestApp()
-	// Simulate Phase 1 already completed
-	a.allPackages = []model.Package{
-		{Name: "vim", Installed: true, Version: "8.2"},
-	}
-	a.installedCount = 1
-	a.upgradableMap = make(map[string]model.Package)
-	a.applyFilter()
-	a.selectedIdx = 0
-
-	msg := allNamesMsg{
-		names: []string{"vim", "curl", "git"},
-	}
-
-	m, _ := a.Update(msg)
-	app := m.(App)
-
-	if !app.allNamesLoaded {
-		t.Error("allNamesLoaded should be true after allNamesMsg")
-	}
-	if len(app.allPackages) != 3 {
-		t.Errorf("expected 3 packages after merge, got %d", len(app.allPackages))
-	}
-}
-
 func TestAllPackagesMsgError(t *testing.T) {
 	a := newTestApp()
 
