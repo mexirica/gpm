@@ -57,8 +57,8 @@ sudo mv aptui /usr/local/bin/
 ## Usage
 
 ```bash
-aptui
-# To avoid using sudo for the ops
+# Run with sudo to allow package management operations (install, remove, upgrade)
+sudo aptui
 sudo aptui 
 ```
 
