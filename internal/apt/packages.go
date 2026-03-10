@@ -40,6 +40,7 @@ func formatSize(raw string) string {
 
 func parseDpkgOutput(output string, installed bool) []model.Package {
 	var packages []model.Package
+	seen := make(map[string]bool)
 	lines := strings.Split(strings.TrimSpace(output), "\n")
 	for _, line := range lines {
 		if line == "" {
@@ -69,8 +70,9 @@ func parseDpkgOutput(output string, installed bool) []model.Package {
 		if len(parts) >= 6 {
 			pkg.Architecture = strings.TrimSpace(parts[5])
 		}
-		if pkg.Name != "" {
+		if pkg.Name != "" && !seen[pkg.Name] {
 			packages = append(packages, pkg)
+			seen[pkg.Name] = true
 		}
 	}
 	return packages
@@ -78,6 +80,7 @@ func parseDpkgOutput(output string, installed bool) []model.Package {
 
 func parseSearchOutput(output string) []model.Package {
 	var packages []model.Package
+	seen := make(map[string]bool)
 	lines := strings.Split(strings.TrimSpace(output), "\n")
 	for _, line := range lines {
 		if line == "" {
@@ -92,8 +95,9 @@ func parseSearchOutput(output string) []model.Package {
 			pkg.Description = strings.TrimSpace(parts[1])
 		}
 		pkg.Installed = IsInstalled(pkg.Name)
-		if pkg.Name != "" {
+		if pkg.Name != "" && !seen[pkg.Name] {
 			packages = append(packages, pkg)
+			seen[pkg.Name] = true
 		}
 	}
 	return packages
@@ -101,6 +105,7 @@ func parseSearchOutput(output string) []model.Package {
 
 func parseUpgradableOutput(output string) []model.Package {
 	var packages []model.Package
+	seen := make(map[string]bool)
 	lines := strings.Split(strings.TrimSpace(output), "\n")
 	for _, line := range lines {
 		if line == "" || strings.HasPrefix(line, "Listing") {
@@ -125,8 +130,9 @@ func parseUpgradableOutput(output string) []model.Package {
 			rest = strings.TrimRight(rest, "]")
 			pkg.Version = strings.TrimSpace(rest)
 		}
-		if pkg.Name != "" {
+		if pkg.Name != "" && !seen[pkg.Name] {
 			packages = append(packages, pkg)
+			seen[pkg.Name] = true
 		}
 	}
 	return packages
