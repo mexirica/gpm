@@ -149,13 +149,13 @@ func (a App) installSelectedPackages() (tea.Model, tea.Cmd) {
 	var names []string
 	if len(a.selected) > 0 {
 		for name := range a.selected {
-			 names = append(names, name)
+			names = append(names, name)
 		}
 	} else if len(a.filtered) > 0 && a.selectedIdx < len(a.filtered) {
 		pkg := a.filtered[a.selectedIdx]
 		if pkg.Installed {
-			 a.status = fmt.Sprintf("'%s' is already installed.", pkg.Name)
-			 return a, nil
+			a.status = fmt.Sprintf("'%s' is already installed.", pkg.Name)
+			return a, nil
 		}
 		names = append(names, pkg.Name)
 	}
@@ -175,13 +175,13 @@ func (a App) removeSelectedPackages() (tea.Model, tea.Cmd) {
 	var names []string
 	if len(a.selected) > 0 {
 		for name := range a.selected {
-			 names = append(names, name)
+			names = append(names, name)
 		}
 	} else if len(a.filtered) > 0 && a.selectedIdx < len(a.filtered) {
 		pkg := a.filtered[a.selectedIdx]
 		if !pkg.Installed {
-			 a.status = fmt.Sprintf("'%s' is not installed.", pkg.Name)
-			 return a, nil
+			a.status = fmt.Sprintf("'%s' is not installed.", pkg.Name)
+			return a, nil
 		}
 		names = append(names, pkg.Name)
 	}
@@ -201,13 +201,13 @@ func (a App) purgeSelectedPackages() (tea.Model, tea.Cmd) {
 	var names []string
 	if len(a.selected) > 0 {
 		for name := range a.selected {
-			 names = append(names, name)
+			names = append(names, name)
 		}
 	} else if len(a.filtered) > 0 && a.selectedIdx < len(a.filtered) {
 		pkg := a.filtered[a.selectedIdx]
 		if !pkg.Installed {
-			 a.status = fmt.Sprintf("'%s' is not installed.", pkg.Name)
-			 return a, nil
+			a.status = fmt.Sprintf("'%s' is not installed.", pkg.Name)
+			return a, nil
 		}
 		names = append(names, pkg.Name)
 	}
@@ -227,13 +227,13 @@ func (a App) upgradeSelectedPackages() (tea.Model, tea.Cmd) {
 	var names []string
 	if len(a.selected) > 0 {
 		for name := range a.selected {
-			 names = append(names, name)
+			names = append(names, name)
 		}
 	} else if len(a.filtered) > 0 && a.selectedIdx < len(a.filtered) {
 		pkg := a.filtered[a.selectedIdx]
 		if !pkg.Upgradable {
-			 a.status = fmt.Sprintf("'%s' is already at the latest version.", pkg.Name)
-			 return a, nil
+			a.status = fmt.Sprintf("'%s' is already at the latest version.", pkg.Name)
+			return a, nil
 		}
 		names = append(names, pkg.Name)
 	}
@@ -276,13 +276,6 @@ func (a App) switchTab(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
 		return a, nil, false
 	}
 
-	a.applyFilter()
-	var cmds []tea.Cmd
-	if len(a.filtered) > 0 {
-		cmds = append(cmds, showPackageDetailCmd(a.filtered[0].Name))
-	}
-	cmds = append(cmds, a.preloadVisiblePackageInfo())
-	tabNames := []string{"All", "Installed", "Upgradable"}
-	a.status = fmt.Sprintf("%d packages (%s) ", len(a.filtered), tabNames[a.activeTab])
-	return a, tea.Batch(cmds...), true
+	cmd := a.activateTab()
+	return a, cmd, true
 }

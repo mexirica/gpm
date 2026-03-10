@@ -4,33 +4,65 @@ import (
 	"fmt"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 
 	"github.com/mexirica/aptui/internal/filter"
 )
 
 const (
-	// packageListHeaderY is the Y position of the column header row.
-	// Layout: tabBar(1) + newline(1) = header at row 2
-	packageListHeaderY = 2
-	// packageListStartY is where the first package row begins.
-	// header(1) + separator(1) after headerY = 4
-	packageListStartY = 4
+	packageListHeaderY = 1
+	packageListStartY  = 3
 )
 
 func (a App) onMouseClick(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
+	if msg.Button == tea.MouseButtonWheelUp {
+		a.selectedIdx -= 3
+		if a.selectedIdx < 0 {
+			a.selectedIdx = 0
+		}
+		a.adjustPackageScroll()
+		if len(a.filtered) > 0 {
+			return a, showPackageDetailCmd(a.filtered[a.selectedIdx].Name)
+		}
+		return a, nil
+	}
+	if msg.Button == tea.MouseButtonWheelDown {
+		a.selectedIdx += 3
+		if a.selectedIdx >= len(a.filtered) {
+			a.selectedIdx = len(a.filtered) - 1
+		}
+		if a.selectedIdx < 0 {
+			a.selectedIdx = 0
+		}
+		a.adjustPackageScroll()
+		if len(a.filtered) > 0 {
+			return a, showPackageDetailCmd(a.filtered[a.selectedIdx].Name)
+		}
+		return a, nil
+	}
+
 	if msg.Action != tea.MouseActionPress || msg.Button != tea.MouseButtonLeft {
 		return a, nil
 	}
 
 	y := msg.Y
 
-	// Click on column header area (rows 1-3) → toggle sort
-	if y >= packageListHeaderY-1 && y <= packageListHeaderY+1 {
+	// Click on tab bar (row 0) → switch tab
+	if y == 0 {
+		return a.onTabClick(msg.X)
+	}
+
+	// Click on column header/separator area → toggle sort
+	if y >= packageListHeaderY && y < packageListStartY {
 		return a.onHeaderClick(msg.X)
 	}
 
+	if y == a.searchBarY() && !a.searching {
+		return a.openSearch()
+	}
+
 	row := y - packageListStartY
-	if row < 0 {
+	if row < 0 || row >= a.packageListHeight() {
 		return a, nil
 	}
 
@@ -58,6 +90,23 @@ func (a App) onMouseClick(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	a.selectedIdx = idx
 	a.adjustPackageScroll()
 	return a, showPackageDetailCmd(a.filtered[a.selectedIdx].Name)
+}
+
+func (a App) onTabClick(x int) (tea.Model, tea.Cmd) {
+	pos := 0
+	for _, tab := range tabDefs {
+		w := lipgloss.Width(a.tabStyle(tab).Render(tab.label))
+		if x >= pos && x < pos+w {
+			if tab.kind == a.activeTab {
+				return a, nil
+			}
+			a.activeTab = tab.kind
+			cmd := a.activateTab()
+			return a, cmd
+		}
+		pos += w
+	}
+	return a, nil
 }
 
 // onHeaderClick maps an X coordinate to a column and toggles sorting.

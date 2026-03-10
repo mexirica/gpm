@@ -103,25 +103,9 @@ func (a App) View() string {
 }
 
 func (a App) renderTabBar() string {
-	tabs := []struct {
-		label string
-		kind  tabKind
-	}{
-		{" ◉ All ", tabAll},
-		{" ● Installed ", tabInstalled},
-		{" ↑ Upgradable ", tabUpgradable},
-	}
-
 	var parts []string
-	hasUpgradable := len(a.upgradableMap) > 0
-	for _, t := range tabs {
-		if t.kind == a.activeTab {
-			parts = append(parts, ui.TabActiveStyle.Render(t.label))
-		} else if t.kind == tabUpgradable && hasUpgradable {
-			parts = append(parts, ui.TabNotifyStyle.Render(t.label))
-		} else {
-			parts = append(parts, ui.TabInactiveStyle.Render(t.label))
-		}
+	for _, t := range tabDefs {
+		parts = append(parts, a.tabStyle(t).Render(t.label))
 	}
 	return lipgloss.JoinHorizontal(lipgloss.Top, parts...)
 }
