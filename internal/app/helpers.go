@@ -1,20 +1,46 @@
 package app
 
 import (
+	"fmt"
 	"sort"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 
 	"github.com/mexirica/aptui/internal/apt"
 	"github.com/mexirica/aptui/internal/filter"
 	"github.com/mexirica/aptui/internal/fuzzy"
 	"github.com/mexirica/aptui/internal/model"
+	"github.com/mexirica/aptui/internal/ui"
 )
 
 type scoredPackage struct {
 	pkg   model.Package
 	score int
+}
+
+// tabStyle returns the appropriate style for a tab given the current state.
+func (a App) tabStyle(t tabDef) lipgloss.Style {
+	if t.kind == a.activeTab {
+		return ui.TabActiveStyle
+	}
+	if t.kind == tabUpgradable && len(a.upgradableMap) > 0 {
+		return ui.TabNotifyStyle
+	}
+	return ui.TabInactiveStyle
+}
+
+// activateTab switches to the given tab and returns the commands to refresh the view.
+func (a *App) activateTab() tea.Cmd {
+	a.applyFilter()
+	var cmds []tea.Cmd
+	if len(a.filtered) > 0 {
+		cmds = append(cmds, showPackageDetailCmd(a.filtered[0].Name))
+	}
+	cmds = append(cmds, a.preloadVisiblePackageInfo())
+	a.status = fmt.Sprintf("%d packages (%s) ", len(a.filtered), tabDefs[a.activeTab].name)
+	return tea.Batch(cmds...)
 }
 
 // applyFilter rebuilds the filtered list from allPackages based on active tab,
@@ -271,6 +297,24 @@ func (a *App) adjustTransactionScroll() {
 	if a.transactionIdx >= a.transactionOffset+h {
 		a.transactionOffset = a.transactionIdx - h + 1
 	}
+}
+
+// searchBarY returns the Y coordinate of the search bar row.
+func (a App) searchBarY() int {
+	helpLines := strings.Count(a.help.View(a.keys), "\n") + 1
+	filterLines := 0
+	if a.filtering || a.advancedFilter != "" {
+		filterLines = 1
+	}
+	if !a.loading && len(a.filtered) > 0 {
+		detailLines := a.packageDetailHeight()
+		if a.detailName == "" || a.detailInfo == "" {
+			pkg := a.filtered[a.selectedIdx]
+			detailLines = strings.Count(a.renderBasicDetail(pkg), "\n")
+		}
+		return a.height - 4 - filterLines - detailLines - helpLines
+	}
+	return a.height - 3 - filterLines - helpLines
 }
 
 func (a App) packageListHeight() int {

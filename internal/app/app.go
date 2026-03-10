@@ -24,6 +24,18 @@ const (
 	tabUpgradable
 )
 
+type tabDef struct {
+	label string
+	kind  tabKind
+	name  string
+}
+
+var tabDefs = []tabDef{
+	{" ◉ All ", tabAll, "All"},
+	{" ● Installed ", tabInstalled, "Installed"},
+	{" ↑ Upgradable ", tabUpgradable, "Upgradable"},
+}
+
 // App is the main Bubbletea model. It manages three views:
 // the package list (default), the transaction history, and the mirror selector.
 type App struct {
