@@ -47,7 +47,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a.onExecFinished(msg)
 
 	case clearStatusMsg:
-		if a.pendingStatus != "" {
+		if a.pendingStatus != "" && !a.loading{
 			a.status = a.pendingStatus
 			a.pendingStatus = ""
 		}
