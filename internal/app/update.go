@@ -265,7 +265,7 @@ func (a App) onSilentUpdateDone(msg silentUpdateDoneMsg) (tea.Model, tea.Cmd) {
 	upgCount := len(msg.upgradable)
 	a.status = fmt.Sprintf("%d packages (%d installed, %d upgradable) ",
 		len(a.allPackages), a.installedCount, upgCount)
-	return a, nil
+	return a, a.preloadVisiblePackageInfo()
 }
 
 func (a App) onPackageInfoLoaded(msg infoLoadedMsg) (tea.Model, tea.Cmd) {
