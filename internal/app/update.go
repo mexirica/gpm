@@ -255,9 +255,10 @@ func (a App) onSilentUpdateDone(msg silentUpdateDoneMsg) (tea.Model, tea.Cmd) {
 			a.allPackages[i].Upgradable = true
 			a.allPackages[i].NewVersion = up.NewVersion
 		} else {
-			a.allPackages[i].Upgradable = false
-			a.allPackages[i].NewVersion = ""
-		}
+			if a.allPackages[i].Installed {
+				a.allPackages[i].Upgradable = false
+				a.allPackages[i].NewVersion = ""
+			}
 	}
 	a.applyFilter()
 	upgCount := len(msg.upgradable)
