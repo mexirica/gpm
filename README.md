@@ -4,16 +4,29 @@ APTUI is a terminal user interface (TUI) written in Go for managing APT packages
 
 Built with [Bubble Tea](https://github.com/charmbracelet/bubbletea), [Lip Gloss](https://github.com/charmbracelet/lipgloss) and [Bubbles](https://github.com/charmbracelet/bubbles).
 
-<!-- Screenshots gallery -->
-| ![Start screen](assets/start.png) | ![Transactions](assets/transaction.png) |
-|:--:|:--:|
-| Start screen | Transactions |
 
-<!-- Centered animated GIF -->
-<p align="center">
-	<img src="assets/mirror.gif" alt="Mirror testing" width="900" />
-</p>
-<p align="center"><em>Mirror detection and latency testing (animated)</em></p>
+<table>
+<tr>
+  <td><img src="assets/start.png" width="500"></td>
+  <td><img src="assets/transaction.png" width="500"></td>
+</tr>
+<tr>
+  <td><img src="assets/ppa.png" width="500"></td>
+  <td><img src="assets/error.png" width="500"></td>
+</tr>
+</table>
+
+
+
+<table>
+<tr>
+  <td><img src="assets/filter.gif" width="500"></td>
+  <td><img src="assets/mirror.gif" width="500"></td>
+</tr>
+<tr>
+  <td colspan="2" align="left"><em>Scrollable</em></td>
+</tr>
+</table>
 
 ## Features
 
@@ -27,6 +40,9 @@ Built with [Bubble Tea](https://github.com/charmbracelet/bubbletea), [Lip Gloss]
 - **Parallel downloads** — installs and upgrades use parallel downloads by default for faster operations
 - **Transaction history** — every operation is recorded; undo (`z`) or redo (`x`) past transactions
 - **Fetch mirrors** — detect your distro, test mirror latency, and apply the fastest sources
+- **PPA management** — list, add, remove, enable and disable PPA repositories ([docs](docs/ppa.md))
+- **Cleanup** — dedicated tab listing autoremovable packages; clean them all with `c`
+- **Error log** — all errors are captured and shown in a dedicated tab with source, timestamp and full message detail
 - **Inline detail panel** — shows package metadata (version, size, dependencies, homepage, etc.)
 
 ## Installation
@@ -71,7 +87,7 @@ sudo aptui
 | `↓` / `j` | Move down |
 | `pgup` / `ctrl+u` | Page up |
 | `pgdown` / `ctrl+d` | Page down |
-| `tab` | Switch tab (All → Installed → Upgradable) |
+| `tab` | Switch tab (All → Installed → Upgradable → Cleanup → Errors) |
 
 ### Search & Filter
 
@@ -118,6 +134,8 @@ See the full [filter documentation](docs/filter.md) for all available options.
 | `u` | Upgrade package (or all selected) |
 | `G` | Upgrade all packages (`apt-get upgrade`) |
 | `p` | Purge package (or all selected) |
+| `c` | Clean up all autoremovable packages |
+| `U` | Run `apt-get update` |
 | `ctrl+r` | Refresh package list |
 
 ### History & Mirrors
@@ -128,6 +146,16 @@ See the full [filter documentation](docs/filter.md) for all available options.
 | `z` | Undo selected transaction |
 | `x` | Redo selected transaction |
 | `f` | Fetch and test mirrors |
+
+### PPA Management
+
+| Key | Action |
+|---|---|
+| `P` | Open PPA list |
+| `a` | Add a new PPA |
+| `r` | Remove selected PPA |
+| `e` | Enable / disable selected PPA |
+| `esc` | Back to package list |
 
 ### General
 
