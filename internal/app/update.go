@@ -395,7 +395,7 @@ func (a App) onExecFinished(msg execFinishedMsg) (tea.Model, tea.Cmd) {
 		a.status = ui.ErrorStyle.Render(fmt.Sprintf("Error (%s %s): %s", msg.op, msg.name, friendlyError(msg.err)))
 	} else if msg.op == "update" {
 		a.status = ui.SuccessStyle.Render("✔ apt update completed!")
-	} else if msg.op == "cleanup" || msg.op == "cleanup-all" {
+	} else if msg.op == "cleanup-all" {
 		a.status = ui.SuccessStyle.Render("✔ Cleanup completed!")
 	} else {
 		a.status = ui.SuccessStyle.Render(fmt.Sprintf("✔ %s %s completed!", msg.op, msg.name))
