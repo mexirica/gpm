@@ -4,7 +4,6 @@ APTUI is a terminal user interface (TUI) written in Go for managing APT packages
 
 Built with [Bubble Tea](https://github.com/charmbracelet/bubbletea), [Lip Gloss](https://github.com/charmbracelet/lipgloss) and [Bubbles](https://github.com/charmbracelet/bubbles).
 
-<!-- Screenshots gallery -->
 
 <table>
 <tr>
@@ -24,12 +23,16 @@ Built with [Bubble Tea](https://github.com/charmbracelet/bubbletea), [Lip Gloss]
 </tr>
 </table>  
 
+
 <table>
 <tr>
   <td><img src="assets/filter.gif" width="500"></td>
   <td><img src="assets/mirror.gif" width="500"></td>
 </tr>
-</table>  
+<tr>
+  <td colspan="2" align="center"><em>Scrollable</em></td>
+</tr>
+</table>
 
 ## Features
 
