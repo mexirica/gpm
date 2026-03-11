@@ -191,6 +191,151 @@ func IsInstalled(name string) bool {
 	return strings.Contains(out.String(), "install ok installed")
 }
 
+// PPA represents a PPA repository configured on the system.
+type PPA struct {
+	Name    string // e.g. "ppa:deadsnakes/ppa"
+	URL     string // e.g. "https://ppa.launchpad.net/deadsnakes/ppa/ubuntu"
+	File    string // source file path
+	Enabled bool
+}
+
+// ListPPAs scans /etc/apt/sources.list.d/ for PPA entries.
+func ListPPAs() ([]PPA, error) {
+	dir := "/etc/apt/sources.list.d"
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil, fmt.Errorf("read sources.list.d: %w", err)
+	}
+
+	var ppas []PPA
+	seen := make(map[string]bool)
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		path := dir + "/" + entry.Name()
+
+		if strings.HasSuffix(entry.Name(), ".list") {
+			data, err := os.ReadFile(path)
+			if err != nil {
+				continue
+			}
+			for _, line := range strings.Split(string(data), "\n") {
+				line = strings.TrimSpace(line)
+				enabled := true
+				if strings.HasPrefix(line, "#") {
+					enabled = false
+					line = strings.TrimSpace(strings.TrimPrefix(line, "#"))
+				}
+				if !strings.HasPrefix(line, "deb") {
+					continue
+				}
+				if !strings.Contains(line, "ppa.launchpad.net") && !strings.Contains(line, "ppa.launchpadcontent.net") {
+					continue
+				}
+				ppaName := extractPPAName(line)
+				if ppaName != "" && !seen[ppaName] {
+					seen[ppaName] = true
+					ppas = append(ppas, PPA{
+						Name:    ppaName,
+						URL:     extractPPAURL(line),
+						File:    path,
+						Enabled: enabled,
+					})
+				}
+			}
+		}
+
+		if strings.HasSuffix(entry.Name(), ".sources") {
+			data, err := os.ReadFile(path)
+			if err != nil {
+				continue
+			}
+			content := string(data)
+			if !strings.Contains(content, "ppa.launchpad.net") && !strings.Contains(content, "ppa.launchpadcontent.net") {
+				continue
+			}
+			for _, line := range strings.Split(content, "\n") {
+				line = strings.TrimSpace(line)
+				if !strings.HasPrefix(line, "URIs:") {
+					continue
+				}
+				uri := strings.TrimSpace(strings.TrimPrefix(line, "URIs:"))
+				ppaName := extractPPAName(uri)
+				if ppaName != "" && !seen[ppaName] {
+					seen[ppaName] = true
+					enabled := !strings.Contains(content, "Enabled: no")
+					ppas = append(ppas, PPA{
+						Name:    ppaName,
+						URL:     uri,
+						File:    path,
+						Enabled: enabled,
+					})
+				}
+			}
+		}
+	}
+
+	return ppas, nil
+}
+
+func extractPPAName(line string) string {
+	patterns := []string{"ppa.launchpad.net/", "ppa.launchpadcontent.net/"}
+	for _, pat := range patterns {
+		idx := strings.Index(line, pat)
+		if idx < 0 {
+			continue
+		}
+		rest := line[idx+len(pat):]
+		parts := strings.SplitN(rest, "/", 3)
+		if len(parts) >= 2 && parts[0] != "" && parts[1] != "" {
+			return "ppa:" + parts[0] + "/" + parts[1]
+		}
+	}
+	return ""
+}
+
+func extractPPAURL(line string) string {
+	for _, field := range strings.Fields(line) {
+		if strings.Contains(field, "ppa.launchpad.net") || strings.Contains(field, "ppa.launchpadcontent.net") {
+			return field
+		}
+	}
+	return ""
+}
+
+// ValidatePPA checks that a PPA string has the correct format.
+func ValidatePPA(input string) error {
+	if !strings.HasPrefix(input, "ppa:") {
+		return fmt.Errorf("PPA must start with 'ppa:' (e.g. ppa:user/repo)")
+	}
+	rest := strings.TrimPrefix(input, "ppa:")
+	parts := strings.SplitN(rest, "/", 2)
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+		return fmt.Errorf("PPA format must be 'ppa:user/repository'")
+	}
+	return nil
+}
+
+// AddPPACmd returns a command to add a PPA repository.
+func AddPPACmd(ppa string) *exec.Cmd {
+	c := exec.Command("sudo", "add-apt-repository", "-y", ppa)
+	c.Stdin = os.Stdin
+	c.Stdout = os.Stdout
+	c.Stderr = os.Stderr
+	return c
+}
+
+// RemovePPACmd returns a command to remove a PPA repository.
+func RemovePPACmd(ppa string) *exec.Cmd {
+	c := exec.Command("sudo", "add-apt-repository", "-y", "--remove", ppa)
+	c.Stdin = os.Stdin
+	c.Stdout = os.Stdout
+	c.Stderr = os.Stderr
+	return c
+}
+
 type PackageInfo struct {
 	Version      string
 	Size         string

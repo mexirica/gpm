@@ -29,6 +29,7 @@ type KeyMap struct {
 	AptUpdate   key.Binding
 	CleanupAll  key.Binding
 	ErrLogClear key.Binding
+	PPA         key.Binding
 	Tab         key.Binding
 }
 
@@ -134,6 +135,10 @@ var Keys = KeyMap{
 		key.WithKeys("D"),
 		key.WithHelp("D", "clear errors"),
 	),
+	PPA: key.NewBinding(
+		key.WithKeys("P"),
+		key.WithHelp("P", "PPA repos"),
+	),
 
 	Tab: key.NewBinding(
 		key.WithKeys("tab"),
@@ -150,7 +155,7 @@ func (k KeyMap) FullHelp() [][]key.Binding {
 		{k.Up, k.Down, k.PageUp, k.PageDown, k.Tab},
 		{k.Enter, k.Select, k.SelectAll, k.Search, k.Filter},
 		{k.Install, k.Remove, k.Upgrade, k.UpgradeAll, k.Purge},
-		{k.CleanupAll, k.ErrLogClear, k.AptUpdate, k.Fetch, k.Refresh, k.Transaction},
+		{k.CleanupAll, k.ErrLogClear, k.AptUpdate, k.Fetch, k.PPA, k.Refresh, k.Transaction},
 		{k.TranUndo, k.TranRedo, k.Help, k.Quit},
 	}
 }

@@ -93,6 +93,13 @@ type App struct {
 	fetchTotal    int
 	fetchResultCh <-chan fetch.TestResult
 
+	ppaView   bool
+	ppaItems  []apt.PPA
+	ppaIdx    int
+	ppaOffset int
+	ppaAdding bool
+	ppaInput  textinput.Model
+
 	infoCache map[string]apt.PackageInfo
 
 	autoremovable    []string
@@ -129,8 +136,13 @@ func New() App {
 	fi.CharLimit = 200
 	fi.Width = 80
 
+	pi := textinput.New()
+	pi.Placeholder = "ppa:user/repository"
+	pi.CharLimit = 100
+	pi.Width = 50
+
 	s := spinner.New()
-	s.Spinner = spinner.Meter
+	s.Spinner = spinner.Dot
 	s.Style = lipgloss.NewStyle().Foreground(ui.ColorPrimary)
 
 	h := help.New()
@@ -148,6 +160,7 @@ func New() App {
 		autoremovableSet: make(map[string]bool),
 		searchInput:      ti,
 		filterInput:      fi,
+		ppaInput:         pi,
 		spinner:          s,
 		help:             h,
 		keys:             model.Keys,
