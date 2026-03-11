@@ -40,7 +40,7 @@ var tabDefs = []tabDef{
 	{" ● Installed ", tabInstalled, "Installed"},
 	{" ↑ Upgradable ", tabUpgradable, "Upgradable"},
 	{" 🧹 Cleanup ", tabCleanup, "Cleanup"},
-	{" ⚠ Errors ", tabErrorLog, "Errors"},
+	{" ❌ Errors ", tabErrorLog, "Errors"},
 }
 
 // App is the main Bubbletea model. It manages three views:
