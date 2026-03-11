@@ -65,3 +65,14 @@ type autoremovableMsg struct {
 	names []string
 	err   error
 }
+
+type ppaListMsg struct {
+	ppas []apt.PPA
+	err  error
+}
+
+type ppaToggleMsg struct {
+	name   string
+	action string
+	err    error
+}

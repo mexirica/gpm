@@ -41,6 +41,10 @@ func (a App) onKeypress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return a.openTransactions()
 	case "f":
 		return a.openFetchMirrors()
+	case "P":
+		return a.openPPAView()
+	case "D":
+		return a.clearErrorLog()
 	case "U":
 		return a.runAptUpdate()
 	}
@@ -139,4 +143,15 @@ func (a App) openFetchMirrors() (tea.Model, tea.Cmd) {
 	a.loading = true
 	a.status = "Detecting distro and fetching mirror list..."
 	return a, tea.Batch(a.spinner.Tick, fetchMirrorListCmd())
+}
+
+func (a App) openPPAView() (tea.Model, tea.Cmd) {
+	a.ppaView = true
+	a.ppaItems = nil
+	a.ppaIdx = 0
+	a.ppaOffset = 0
+	a.ppaAdding = false
+	a.loading = true
+	a.status = "Loading PPA repositories..."
+	return a, tea.Batch(a.spinner.Tick, listPPAsCmd())
 }

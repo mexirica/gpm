@@ -23,9 +23,6 @@ func (a App) dispatchErrorLog(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
 	case "ctrl+u", "pgup":
 		m, cmd := a.scrollErrorsUp()
 		return m, cmd, true
-	case "D":
-		m, cmd := a.clearErrorLog()
-		return m, cmd, true
 	}
 	return a, nil, false
 }

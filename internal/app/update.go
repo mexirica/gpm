@@ -59,6 +59,12 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case autoremovableMsg:
 		return a.onAutoremovableLoaded(msg)
 
+	case ppaListMsg:
+		return a.onPPAListLoaded(msg)
+
+	case ppaToggleMsg:
+		return a.onPPAToggled(msg)
+
 	case fetchMirrorsMsg:
 		return a.onMirrorListLoaded(msg)
 
@@ -69,13 +75,16 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a.onMirrorApplyResult(msg)
 
 	case tea.MouseMsg:
-		if !a.fetchView && !a.transactionView && !a.loading {
+		if !a.fetchView && !a.transactionView && !a.ppaView && !a.loading {
 			return a.onMouseClick(msg)
 		}
 
 	case tea.KeyMsg:
 		if a.fetchView {
 			return a.onFetchKeypress(msg)
+		}
+		if a.ppaView {
+			return a.onPPAKeypress(msg)
 		}
 		if a.transactionView {
 			return a.onTransactionKeypress(msg)
@@ -387,7 +396,7 @@ func (a App) onExecFinished(msg execFinishedMsg) (tea.Model, tea.Cmd) {
 	if len(pkgs) == 0 {
 		pkgs = []string{msg.name}
 	}
-	if op != "update" && op != "cleanup-all" {
+	if op != "update" && op != "cleanup-all" && op != "ppa-add" && op != "ppa-remove" {
 		a.transactionStore.Record(op, pkgs, success)
 	}
 	a.pendingExecPkgs = nil
@@ -401,11 +410,20 @@ func (a App) onExecFinished(msg execFinishedMsg) (tea.Model, tea.Cmd) {
 		a.status = ui.SuccessStyle.Render("✔ apt update completed!")
 	} else if msg.op == "cleanup-all" {
 		a.status = ui.SuccessStyle.Render("✔ Cleanup completed!")
+	} else if msg.op == "ppa-add" {
+		a.status = ui.SuccessStyle.Render(fmt.Sprintf("✔ PPA %s added!", msg.name))
+	} else if msg.op == "ppa-remove" {
+		a.status = ui.SuccessStyle.Render(fmt.Sprintf("✔ PPA %s removed!", msg.name))
 	} else {
 		a.status = ui.SuccessStyle.Render(fmt.Sprintf("✔ %s %s completed!", msg.op, msg.name))
 	}
 	a.statusLock = time.Now()
-	return a, tea.Batch(reloadAllPackages, loadAutoremovableCmd(), clearStatusAfter(2*time.Second))
+
+	cmds := []tea.Cmd{reloadAllPackages, loadAutoremovableCmd(), clearStatusAfter(2 * time.Second)}
+	if msg.op == "ppa-add" || msg.op == "ppa-remove" {
+		cmds = append(cmds, listPPAsCmd())
+	}
+	return a, tea.Batch(cmds...)
 }
 
 func (a App) onDepsLoaded(msg depsLoadedMsg) (tea.Model, tea.Cmd) {
@@ -500,4 +518,34 @@ func (a App) onAutoremovableLoaded(msg autoremovableMsg) (tea.Model, tea.Cmd) {
 		}
 	}
 	return a, nil
+}
+
+func (a App) onPPAListLoaded(msg ppaListMsg) (tea.Model, tea.Cmd) {
+	a.loading = false
+	if msg.err != nil {
+		a.errlogStore.Log("ppa-list", msg.err.Error())
+		a.ppaItems = nil
+		a.status = ui.ErrorStyle.Render(fmt.Sprintf("Error listing PPAs: %v", msg.err))
+		return a, nil
+	}
+	a.ppaItems = msg.ppas
+	if a.ppaIdx >= len(a.ppaItems) {
+		a.ppaIdx = len(a.ppaItems) - 1
+		if a.ppaIdx < 0 {
+			a.ppaIdx = 0
+		}
+	}
+	a.status = fmt.Sprintf("%d PPA(s) found", len(a.ppaItems))
+	return a, nil
+}
+
+func (a App) onPPAToggled(msg ppaToggleMsg) (tea.Model, tea.Cmd) {
+	a.loading = false
+	if msg.err != nil {
+		a.errlogStore.Log("ppa-toggle", msg.err.Error())
+		a.status = ui.ErrorStyle.Render(fmt.Sprintf("Error toggling PPA %s: %v", msg.name, msg.err))
+		return a, nil
+	}
+	a.status = ui.SuccessStyle.Render(fmt.Sprintf("✔ PPA %s %s!", msg.name, msg.action))
+	return a, tea.Batch(listPPAsCmd(), silentUpdateCmd(), reloadAllPackages, clearStatusAfter(2*time.Second))
 }

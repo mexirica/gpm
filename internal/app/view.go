@@ -24,6 +24,10 @@ func (a App) View() string {
 		return a.renderFetchView(w)
 	}
 
+	if a.ppaView {
+		return a.renderPPAView(w)
+	}
+
 	if a.transactionView {
 		return a.renderTransactionView(w)
 	}
@@ -210,6 +214,83 @@ func (a App) renderFetchView(w int) string {
 		}
 	} else {
 		listView := components.RenderMirrorList(a.fetchMirrors, a.fetchIdx, a.fetchOffset, a.packageListHeight(), w, a.fetchSelected)
+		upperView = header + "\n" + listView
+	}
+
+	listLines := strings.Count(upperView, "\n")
+	gap := a.height - listLines - footerLines
+	if gap < 0 {
+		gap = 0
+	}
+
+	return upperView + strings.Repeat("\n", gap) + footerView
+}
+
+func (a App) renderPPAView(w int) string {
+	titleStyle := lipgloss.NewStyle().Bold(true).
+		Foreground(lipgloss.Color("#FFFFFF")).
+		Background(lipgloss.Color("#7D56F4")).
+		Width(w).Padding(0, 1)
+	header := titleStyle.Render("PPA Repositories")
+
+	var footer []string
+	counterStyle := lipgloss.NewStyle().Foreground(ui.ColorSecondary)
+	footer = append(footer, counterStyle.Render(fmt.Sprintf("  %d PPA(s)", len(a.ppaItems))))
+
+	sep := lipgloss.NewStyle().Foreground(ui.ColorPrimary).Render(strings.Repeat("─", w))
+	footer = append(footer, sep)
+
+	if !a.loading && len(a.ppaItems) > 0 && a.ppaIdx < len(a.ppaItems) {
+		p := a.ppaItems[a.ppaIdx]
+		lbl := lipgloss.NewStyle().Foreground(ui.ColorWhite).Bold(true).Width(14).Align(lipgloss.Right)
+		sepChar := lipgloss.NewStyle().Foreground(ui.ColorMuted)
+		val := lipgloss.NewStyle().Foreground(ui.ColorWhite)
+
+		var detail strings.Builder
+		fmt.Fprintf(&detail, "  %s %s %s\n", lbl.Render("Name"), sepChar.Render(":"), val.Render(p.Name))
+		fmt.Fprintf(&detail, "  %s %s %s\n", lbl.Render("URL"), sepChar.Render(":"), val.Render(p.URL))
+		status := "Enabled"
+		stStyle := lipgloss.NewStyle().Foreground(ui.ColorSuccess).Bold(true)
+		if !p.Enabled {
+			status = "Disabled"
+			stStyle = lipgloss.NewStyle().Foreground(ui.ColorDanger).Bold(true)
+		}
+		fmt.Fprintf(&detail, "  %s %s %s\n", lbl.Render("Status"), sepChar.Render(":"), stStyle.Render(status))
+		fmt.Fprintf(&detail, "  %s %s %s\n", lbl.Render("File"), sepChar.Render(":"), val.Render(p.File))
+		footer = append(footer, detail.String())
+	}
+
+	if a.ppaAdding {
+		footer = append(footer, "  "+a.ppaInput.View())
+	}
+
+	footer = append(footer, components.RenderStatusBar(a.status, w))
+	helpLine := components.RenderPPAFooterHelp()
+	footer = append(footer, lipgloss.NewStyle().Foreground(ui.ColorMuted).Render(helpLine))
+
+	footerView := lipgloss.JoinVertical(lipgloss.Left, footer...)
+	footerLines := strings.Count(footerView, "\n") + 1
+
+	var upperView string
+	if a.loading {
+		headerLines := strings.Count(header, "\n") + 1
+		availLines := a.height - headerLines - footerLines
+		if availLines < 1 {
+			availLines = 1
+		}
+		topPad := (availLines - 1) / 2
+		if topPad < 0 {
+			topPad = 0
+		}
+		loadingLine := fmt.Sprintf("Loading PPAs %s", a.spinner.View())
+		centered := lipgloss.NewStyle().Width(w).Align(lipgloss.Center).Render(loadingLine)
+		upperView = header + "\n" + strings.Repeat("\n", topPad) + centered + "\n"
+		rem := availLines - topPad - 1
+		if rem > 0 {
+			upperView += strings.Repeat("\n", rem)
+		}
+	} else {
+		listView := components.RenderPPAList(a.ppaItems, a.ppaIdx, a.ppaOffset, a.packageListHeight(), w)
 		upperView = header + "\n" + listView
 	}
 

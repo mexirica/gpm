@@ -11,6 +11,8 @@ import (
 	"sort"
 	"sync"
 	"time"
+
+	"github.com/mexirica/aptui/internal/datadir"
 )
 
 type Operation string
@@ -40,11 +42,7 @@ type Store struct {
 // historyPath returns the path to the history file.
 // It is a variable so tests can override it.
 var historyPath = func() string {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		home = "/tmp"
-	}
-	return filepath.Join(home, ".local", "share", "aptui", "history.json")
+	return filepath.Join(datadir.Dir(), "history.json")
 }
 
 func Load() *Store {
@@ -64,15 +62,7 @@ func Load() *Store {
 }
 
 func (s *Store) save() error {
-	dir := filepath.Dir(s.path)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return err
-	}
-	data, err := json.MarshalIndent(s, "", "  ")
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(s.path, data, 0o644)
+	return datadir.SaveJSON(s.path, s)
 }
 
 func (s *Store) Record(op Operation, packages []string, success bool) Transaction {

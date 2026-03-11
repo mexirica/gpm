@@ -392,6 +392,16 @@ func (a App) errorLogListHeight() int {
 	return mv
 }
 
+func (a *App) adjustPPAScroll() {
+	h := a.packageListHeight()
+	if a.ppaIdx < a.ppaOffset {
+		a.ppaOffset = a.ppaIdx
+	}
+	if a.ppaIdx >= a.ppaOffset+h {
+		a.ppaOffset = a.ppaIdx - h + 1
+	}
+}
+
 func friendlyError(err error) string {
 	if err == nil {
 		return "unknown error"

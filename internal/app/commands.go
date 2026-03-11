@@ -183,3 +183,36 @@ func autoremoveAllCmd(names []string) tea.Cmd {
 		return execFinishedMsg{op: "cleanup-all", name: strings.Join(names, " "), err: err}
 	})
 }
+
+func listPPAsCmd() tea.Cmd {
+	return func() tea.Msg {
+		ppas, err := apt.ListPPAs()
+		return ppaListMsg{ppas: ppas, err: err}
+	}
+}
+
+func addPPACmd(ppa string) tea.Cmd {
+	cmd := apt.AddPPACmd(ppa)
+	return tea.ExecProcess(cmd, func(err error) tea.Msg {
+		return execFinishedMsg{op: "ppa-add", name: ppa, err: err}
+	})
+}
+
+func removePPACmd(ppa string) tea.Cmd {
+	cmd := apt.RemovePPACmd(ppa)
+	return tea.ExecProcess(cmd, func(err error) tea.Msg {
+		return execFinishedMsg{op: "ppa-remove", name: ppa, err: err}
+	})
+}
+
+func togglePPACmd(ppa apt.PPA) tea.Cmd {
+	return func() tea.Msg {
+		enabled := !ppa.Enabled
+		err := apt.SetPPAEnabled(ppa, enabled)
+		action := "enabled"
+		if !enabled {
+			action = "disabled"
+		}
+		return ppaToggleMsg{name: ppa.Name, action: action, err: err}
+	}
+}

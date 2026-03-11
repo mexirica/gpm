@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"sync"
 	"time"
+
+	"github.com/mexirica/aptui/internal/datadir"
 )
 
 type Entry struct {
@@ -26,11 +28,7 @@ type Store struct {
 }
 
 var logPath = func() string {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		home = "/tmp"
-	}
-	return filepath.Join(home, ".local", "share", "aptui", "errors.json")
+	return filepath.Join(datadir.Dir(), "errors.json")
 }
 
 func Load() *Store {
@@ -50,15 +48,7 @@ func Load() *Store {
 }
 
 func (s *Store) save() error {
-	dir := filepath.Dir(s.path)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return err
-	}
-	data, err := json.MarshalIndent(s, "", "  ")
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(s.path, data, 0o644)
+	return datadir.SaveJSON(s.path, s)
 }
 
 func (s *Store) Log(source string, message string) Entry {
