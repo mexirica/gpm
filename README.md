@@ -163,3 +163,13 @@ See the full [filter documentation](docs/filter.md) for all available options.
 |---|---|
 | `h` | Toggle full help |
 | `q` / `ctrl+c` | Quit |
+
+---
+
+<a href="https://www.star-history.com/?repos=mexirica%2Faptui&type=date&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/image?repos=mexirica/aptui&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/image?repos=mexirica/aptui&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/image?repos=mexirica/aptui&type=date&legend=top-left" />
+ </picture>
+</a>
