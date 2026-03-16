@@ -244,6 +244,50 @@ func PurgeBatchCmd(names []string) *exec.Cmd {
 	return c
 }
 
+// ListHeld returns the names of packages currently held back via apt-mark.
+func ListHeld() ([]string, error) {
+	cmd := exec.Command("apt-mark", "showhold")
+	var out bytes.Buffer
+	var stderr bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		return nil, fmt.Errorf("apt-mark showhold: %s", stderr.String())
+	}
+	var names []string
+	for _, line := range strings.Split(strings.TrimSpace(out.String()), "\n") {
+		line = strings.TrimSpace(line)
+		if line != "" {
+			names = append(names, line)
+		}
+	}
+	return names, nil
+}
+
+// Hold holds packages via apt-mark hold.
+func Hold(names []string) error {
+	args := append([]string{"-n", "apt-mark", "hold"}, names...)
+	cmd := exec.Command("sudo", args...)
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("apt-mark hold: %s", stderr.String())
+	}
+	return nil
+}
+
+// Unhold unholds packages via apt-mark unhold.
+func Unhold(names []string) error {
+	args := append([]string{"-n", "apt-mark", "unhold"}, names...)
+	cmd := exec.Command("sudo", args...)
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("apt-mark unhold: %s", stderr.String())
+	}
+	return nil
+}
+
 func ListAllNames() ([]string, error) {
 	cmd := exec.Command("apt-cache", "pkgnames")
 	var out bytes.Buffer

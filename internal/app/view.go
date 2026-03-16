@@ -72,7 +72,9 @@ func (a App) View() string {
 	if !a.loading && len(a.filtered) > 0 && a.detailName != "" && a.detailInfo != "" {
 		pkg := a.filtered[a.selectedIdx]
 		statusLine := "Status: Not installed"
-		if pkg.Upgradable {
+		if pkg.Held {
+			statusLine = "Status: Held"
+		} else if pkg.Upgradable {
 			statusLine = "Status: Upgrade available (" + pkg.Version + " → " + pkg.NewVersion + ")"
 		} else if pkg.Installed {
 			statusLine = "Status: Installed"
@@ -122,7 +124,10 @@ func (a App) renderBasicDetail(pkg model.Package) string {
 
 	status := "Not installed"
 	statusStyle := lipgloss.NewStyle().Foreground(ui.ColorSecondary)
-	if pkg.Upgradable {
+	if pkg.Held {
+		status = "Held"
+		statusStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF8C00")).Bold(true)
+	} else if pkg.Upgradable {
 		status = "Upgrade available"
 		statusStyle = lipgloss.NewStyle().Foreground(ui.ColorWarning).Bold(true)
 	} else if pkg.Installed {

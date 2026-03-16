@@ -56,6 +56,12 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case autoremovableMsg:
 		return a.onAutoremovableLoaded(msg)
 
+	case holdListMsg:
+		return a.onHeldListLoaded(msg)
+
+	case holdFinishedMsg:
+		return a.onHoldFinished(msg)
+
 	case ppaListMsg:
 		return a.onPPAListLoaded(msg)
 
@@ -119,6 +125,9 @@ func (a App) onAllPackagesLoaded(msg allPackagesMsg) (tea.Model, tea.Cmd) {
 			p.Upgradable = true
 			p.NewVersion = up.NewVersion
 			p.SecurityUpdate = up.SecurityUpdate
+		}
+		if a.heldSet[p.Name] {
+			p.Held = true
 		}
 		// Enrich installed packages with bulk info if fields are missing
 		if info, ok := msg.bulkInfo[p.Name]; ok {
@@ -371,7 +380,7 @@ func (a App) onExecFinished(msg execFinishedMsg) (tea.Model, tea.Cmd) {
 		a.applyOptimisticUpdate(msg.op, pkgs)
 	}
 
-	cmds := []tea.Cmd{reloadAllPackages, loadAutoremovableCmd(), clearStatusAfter(2 * time.Second)}
+	cmds := []tea.Cmd{reloadAllPackages, loadAutoremovableCmd(), loadHeldCmd(), clearStatusAfter(2 * time.Second)}
 	if msg.op == "ppa-add" || msg.op == "ppa-remove" {
 		cmds = append(cmds, listPPAsCmd())
 	}
@@ -470,6 +479,44 @@ func (a App) onAutoremovableLoaded(msg autoremovableMsg) (tea.Model, tea.Cmd) {
 		}
 	}
 	return a, nil
+}
+
+func (a App) onHeldListLoaded(msg holdListMsg) (tea.Model, tea.Cmd) {
+	if msg.err != nil {
+		a.errlogStore.Log("held-list", msg.err.Error())
+		a.heldSet = make(map[string]bool)
+		return a, nil
+	}
+	a.heldSet = make(map[string]bool, len(msg.names))
+	for _, name := range msg.names {
+		a.heldSet[name] = true
+	}
+	for i := range a.allPackages {
+		a.allPackages[i].Held = a.heldSet[a.allPackages[i].Name]
+	}
+	a.applyFilter()
+	return a, nil
+}
+
+func (a App) onHoldFinished(msg holdFinishedMsg) (tea.Model, tea.Cmd) {
+	if msg.err != nil {
+		a.errlogStore.Log("hold", msg.err.Error())
+		a.holdFailed = true
+	}
+	a.holdPending--
+	if a.holdPending > 0 {
+		return a, nil
+	}
+	a.loading = false
+	failed := a.holdFailed
+	a.holdFailed = false
+	if failed {
+		a.status = ui.ErrorStyle.Render("Error: hold/unhold failed")
+		return a, tea.Batch(loadHeldCmd(), clearStatusAfter(2*time.Second))
+	}
+	a.status = ui.SuccessStyle.Render(fmt.Sprintf("✔ %s completed!", msg.op))
+	a.statusLock = time.Now()
+	return a, tea.Batch(loadHeldCmd(), clearStatusAfter(2*time.Second))
 }
 
 func (a App) onPPAListLoaded(msg ppaListMsg) (tea.Model, tea.Cmd) {

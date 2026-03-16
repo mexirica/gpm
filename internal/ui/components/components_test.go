@@ -241,3 +241,15 @@ func TestRenderFetchFooterHelp(t *testing.T) {
 		t.Error("should contain enter key hint")
 	}
 }
+
+func TestRenderPackageListHeldBadge(t *testing.T) {
+	pkgs := []model.Package{
+		{Name: "vim", Version: "8.2", Installed: true, Held: true},
+		{Name: "git", Version: "2.34", Installed: true},
+	}
+
+	result := RenderPackageList(pkgs, 0, 0, 10, 120, nil)
+	if !strings.Contains(result, "🔒") {
+		t.Error("held package should show lock badge")
+	}
+}

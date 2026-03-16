@@ -104,6 +104,10 @@ type App struct {
 	autoremovable    []string
 	autoremovableSet map[string]bool
 
+	heldSet     map[string]bool
+	holdPending int
+	holdFailed  bool
+
 	allNamesLoaded bool
 	installedCount int
 
@@ -152,6 +156,7 @@ func New() App {
 		infoCache:        make(map[string]apt.PackageInfo),
 		pkgIndex:         make(map[string]int),
 		autoremovableSet: make(map[string]bool),
+		heldSet:          make(map[string]bool),
 		searchInput:      ti,
 		ppaInput:         pi,
 		spinner:          s,
@@ -165,5 +170,5 @@ func New() App {
 }
 
 func (a App) Init() tea.Cmd {
-	return tea.Batch(a.spinner.Tick, reloadAllPackages, loadAutoremovableCmd())
+	return tea.Batch(a.spinner.Tick, reloadAllPackages, loadAutoremovableCmd(), loadHeldCmd())
 }

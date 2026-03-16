@@ -14,6 +14,7 @@ type KeyMap struct {
 	Upgrade     key.Binding
 	UpgradeAll  key.Binding
 	Purge       key.Binding
+	Hold        key.Binding
 	Select      key.Binding
 	SelectAll   key.Binding
 	Refresh     key.Binding
@@ -72,6 +73,10 @@ var Keys = KeyMap{
 	Purge: key.NewBinding(
 		key.WithKeys("p"),
 		key.WithHelp("p", "purge"),
+	),
+	Hold: key.NewBinding(
+		key.WithKeys("H"),
+		key.WithHelp("H", "hold/unhold"),
 	),
 	Select: key.NewBinding(
 		key.WithKeys(" "),
@@ -149,7 +154,7 @@ func (k KeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.Up, k.Down, k.PageUp, k.PageDown, k.Tab},
 		{k.Enter, k.Select, k.SelectAll, k.Search},
-		{k.Install, k.Remove, k.Upgrade, k.UpgradeAll, k.Purge},
+		{k.Install, k.Remove, k.Upgrade, k.UpgradeAll, k.Purge, k.Hold},
 		{k.CleanupAll, k.ErrLogClear, k.AptUpdate, k.Fetch, k.PPA, k.Refresh, k.Transaction},
 		{k.TranUndo, k.TranRedo, k.Help, k.Quit},
 	}

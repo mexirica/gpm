@@ -11,4 +11,5 @@ type Package struct {
 	Section        string
 	Architecture   string
 	SecurityUpdate bool
+	Held           bool
 }

@@ -211,3 +211,24 @@ func togglePPACmd(ppa apt.PPA) tea.Cmd {
 		return ppaToggleMsg{name: ppa.Name, action: action, err: err}
 	}
 }
+
+func loadHeldCmd() tea.Cmd {
+	return func() tea.Msg {
+		names, err := apt.ListHeld()
+		return holdListMsg{names: names, err: err}
+	}
+}
+
+func holdBatchCmd(names []string) tea.Cmd {
+	return func() tea.Msg {
+		err := apt.Hold(names)
+		return holdFinishedMsg{op: "hold", err: err}
+	}
+}
+
+func unholdBatchCmd(names []string) tea.Cmd {
+	return func() tea.Msg {
+		err := apt.Unhold(names)
+		return holdFinishedMsg{op: "unhold", err: err}
+	}
+}

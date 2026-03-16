@@ -62,6 +62,16 @@ type autoremovableMsg struct {
 	err   error
 }
 
+type holdListMsg struct {
+	names []string
+	err   error
+}
+
+type holdFinishedMsg struct {
+	op  string
+	err error
+}
+
 type ppaListMsg struct {
 	ppas []apt.PPA
 	err  error
