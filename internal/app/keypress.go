@@ -29,7 +29,7 @@ func (a App) onKeypress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return a, tea.Quit
 	case "h":
 		return a.toggleHelp()
-	case "/", "F":
+	case "/":
 		return a.openSearch()
 	case "esc":
 		return a.clearFilterOrSearch()

@@ -50,7 +50,7 @@ var Keys = KeyMap{
 		key.WithHelp("esc", "back"),
 	),
 	Search: key.NewBinding(
-		key.WithKeys("/", "F"),
+		key.WithKeys("/"),
 		key.WithHelp("/", "search/filter"),
 	),
 	Install: key.NewBinding(
