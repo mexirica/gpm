@@ -1,14 +1,89 @@
 package apt
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"github.com/mexirica/aptui/internal/model"
 )
+
+// LoadAllAvailableInfo parses /var/lib/apt/lists/*_Packages files to bulk-load
+// metadata for all available packages. This is much faster than spawning
+// apt-cache show processes because it's pure file I/O with no process overhead.
+func LoadAllAvailableInfo() map[string]PackageInfo {
+	files, err := filepath.Glob("/var/lib/apt/lists/*_Packages")
+	if err != nil || len(files) == 0 {
+		return nil
+	}
+
+	info := make(map[string]PackageInfo, 100000)
+
+	for _, f := range files {
+		file, err := os.Open(f)
+		if err != nil {
+			continue
+		}
+
+		scanner := bufio.NewScanner(file)
+		scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
+
+		var curPkg, curVer, curSize, curSection, curArch string
+
+		flush := func() {
+			if curPkg != "" {
+				// Overwrite so later files (updates/security, higher apt priority)
+				// take precedence over earlier ones (backports, lower priority).
+				info[curPkg] = PackageInfo{
+					Version:      curVer,
+					Size:         formatSize(curSize),
+					Section:      curSection,
+					Architecture: curArch,
+				}
+			}
+			curPkg, curVer, curSize, curSection, curArch = "", "", "", "", ""
+		}
+
+		for scanner.Scan() {
+			line := scanner.Text()
+			if len(line) == 0 {
+				flush()
+				continue
+			}
+			// Fast first-char dispatch to avoid HasPrefix on every line
+			switch line[0] {
+			case 'P':
+				if strings.HasPrefix(line, "Package: ") {
+					curPkg = line[9:]
+				}
+			case 'V':
+				if strings.HasPrefix(line, "Version: ") {
+					curVer = line[9:]
+				}
+			case 'I':
+				if strings.HasPrefix(line, "Installed-Size: ") {
+					curSize = line[16:]
+				}
+			case 'S':
+				if strings.HasPrefix(line, "Section: ") {
+					curSection = line[9:]
+				}
+			case 'A':
+				if strings.HasPrefix(line, "Architecture: ") {
+					curArch = line[14:]
+				}
+			}
+		}
+		flush()
+		file.Close()
+	}
+
+	return info
+}
 
 func SilentUpdate() error {
 	cmd := exec.Command("sudo", "-n", "apt-get", "update", "-qq")

@@ -31,6 +31,9 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case allPackagesMsg:
 		return a.onAllPackagesLoaded(msg)
 
+	case bulkInfoMsg:
+		return a.onBulkInfoLoaded(msg)
+
 	case silentUpdateDoneMsg:
 		return a.onSilentUpdateDone(msg)
 
@@ -158,6 +161,37 @@ func (a App) onAllPackagesLoaded(msg allPackagesMsg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, silentUpdateCmd())
 	}
 	return a, tea.Batch(cmds...)
+}
+
+func (a App) onBulkInfoLoaded(msg bulkInfoMsg) (tea.Model, tea.Cmd) {
+	if len(msg.info) == 0 {
+		return a, nil
+	}
+	// Merge into infoCache (don't overwrite existing entries)
+	for name, info := range msg.info {
+		if _, ok := a.infoCache[name]; !ok {
+			a.infoCache[name] = info
+		}
+	}
+	// Merge into allPackages for packages missing metadata
+	for name, info := range msg.info {
+		if idx, ok := a.pkgIndex[name]; ok {
+			p := &a.allPackages[idx]
+			if p.Version == "" && p.NewVersion == "" {
+				p.NewVersion = info.Version
+			}
+			if p.Size == "" {
+				p.Size = info.Size
+			}
+			if p.Section == "" {
+				p.Section = info.Section
+			}
+			if p.Architecture == "" {
+				p.Architecture = info.Architecture
+			}
+		}
+	}
+	return a, nil
 }
 
 func (a App) onSilentUpdateDone(msg silentUpdateDoneMsg) (tea.Model, tea.Cmd) {

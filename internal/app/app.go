@@ -174,5 +174,5 @@ func New() App {
 }
 
 func (a App) Init() tea.Cmd {
-	return tea.Batch(a.spinner.Tick, reloadAllPackages, loadAutoremovableCmd())
+	return tea.Batch(a.spinner.Tick, reloadAllPackages, loadAutoremovableCmd(), bulkLoadInfoCmd)
 }

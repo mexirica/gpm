@@ -225,14 +225,23 @@ func (a *App) loadFilterCandidateInfo() tea.Cmd {
 	}
 
 	var names []string
-	for _, p := range a.allPackages {
-		// Skip packages already cached
-		if _, ok := a.infoCache[p.Name]; ok {
-			continue
-		}
-		// Skip packages that already have metadata populated
-		if p.Section != "" || p.Architecture != "" || p.Size != "" {
-			continue
+	for i, p := range a.allPackages {
+		// If metadata is missing, try to fill from cache
+		if p.Section == "" || p.Architecture == "" || p.Size == "" || p.Size == "-" {
+			if info, ok := a.infoCache[p.Name]; ok {
+				if a.allPackages[i].Section == "" {
+					a.allPackages[i].Section = info.Section
+				}
+				if a.allPackages[i].Architecture == "" {
+					a.allPackages[i].Architecture = info.Architecture
+				}
+				if a.allPackages[i].Size == "" || a.allPackages[i].Size == "-" {
+					a.allPackages[i].Size = info.Size
+				}
+				continue
+			}
+		} else {
+			continue // already has metadata
 		}
 		// Only load metadata for packages that pass the non-metadata filters
 		pd := filter.PackageData{

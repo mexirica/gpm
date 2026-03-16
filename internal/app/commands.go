@@ -72,6 +72,11 @@ func clearStatusAfter(d time.Duration) tea.Cmd {
 	})
 }
 
+func bulkLoadInfoCmd() tea.Msg {
+	info := apt.LoadAllAvailableInfo()
+	return bulkInfoMsg{info: info}
+}
+
 func silentUpdateCmd() tea.Cmd {
 	return func() tea.Msg {
 		_ = apt.SilentUpdate()
