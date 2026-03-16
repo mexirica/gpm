@@ -57,6 +57,7 @@ func (a App) toggleHelp() (tea.Model, tea.Cmd) {
 
 func (a App) openSearch() (tea.Model, tea.Cmd) {
 	a.searching = true
+	a.filterQueryBeforeEdit = a.filterQuery
 	a.searchInput.Focus()
 	a.searchInput.SetValue(a.filterQuery)
 	return a, textinput.Blink

@@ -59,9 +59,10 @@ type App struct {
 	detailName string
 
 	// Search state
-	searchInput textinput.Model
-	searching   bool
-	filterQuery string
+	searchInput           textinput.Model
+	searching             bool
+	filterQuery           string
+	filterQueryBeforeEdit string
 
 	selected map[string]bool
 

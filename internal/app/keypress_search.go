@@ -33,11 +33,11 @@ func (a App) submitSearch() (tea.Model, tea.Cmd) {
 		return a, nil
 	}
 	if len(a.filtered) == 0 {
-		// Fallback to apt-cache search using free text portion
 		af := filter.Parse(query)
 		searchTerm := af.FreeText
 		if searchTerm == "" {
-			searchTerm = query
+			a.status = fmt.Sprintf("No packages match filter: %s", query)
+			return a, nil
 		}
 		a.loading = true
 		a.status = fmt.Sprintf("Searching '%s' via apt-cache...", searchTerm)
@@ -50,9 +50,7 @@ func (a App) submitSearch() (tea.Model, tea.Cmd) {
 func (a App) cancelSearch() (tea.Model, tea.Cmd) {
 	a.searching = false
 	a.searchInput.Blur()
-	// Restore filterQuery to what it was before opening search
-	// (searchInput was set to filterQuery on open, so if user edited
-	// and then cancelled, we keep the original)
+	a.filterQuery = a.filterQueryBeforeEdit
 	a.applyFilter()
 	a.status = fmt.Sprintf("%d packages ", len(a.filtered))
 	return a, nil
