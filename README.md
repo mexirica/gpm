@@ -92,7 +92,7 @@ sudo aptui
 
 | Key | Action |
 |---|---|
-| `/` or `F` | Open [search/filter](docs/filter.md) bar |
+| `/` | Open [search/filter](docs/filter.md) bar |
 | `enter` | Confirm search / apply filter |
 | `esc` | Clear search / filter / go back |
 
