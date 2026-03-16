@@ -133,7 +133,13 @@ func RenderPackageList(packages []model.Package, selected int, offset int, maxVi
 
 		badge := "○"
 		badgeStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#6C6C6C"))
-		if pkg.Upgradable {
+		if pkg.Held {
+			badge = "🔒"
+			badgeStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF8C00")).Bold(true)
+		} else if pkg.Upgradable && pkg.SecurityUpdate {
+			badge = "⚠"
+			badgeStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF4672")).Bold(true)
+		} else if pkg.Upgradable {
 			badge = "↑"
 			badgeStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#FFC107")).Bold(true)
 		} else if pkg.Installed {
@@ -175,20 +181,34 @@ func RenderPackageList(packages []model.Package, selected int, offset int, maxVi
 			sizePad = 0
 		}
 
+		lineNameStyle := normalLine
+		lineVersionStyle := versionStyle
+		lineSizeStyle := sizeStyle
+		if pkg.Held {
+			heldDim := lipgloss.NewStyle().Foreground(lipgloss.Color("#6C6C6C"))
+			lineNameStyle = heldDim
+			lineVersionStyle = heldDim
+			lineSizeStyle = heldDim
+		}
+
 		if i == selected {
-			cursor := cursorStyle.Render(" ▌")
+			cursor := cursorStyle.Render(" \u258c")
+			selName := selectedLine
+			if pkg.Held {
+				selName = lipgloss.NewStyle().Foreground(lipgloss.Color("#8A8A8A")).Bold(true)
+			}
 			row := fmt.Sprintf("%s %s %s %s%s  %s%s  %s%s\n",
 				cursor, selMarker, badgeStyle.Render(badge),
-				selectedLine.Render(name), strings.Repeat(" ", namePad),
-				versionStyle.Render(version), strings.Repeat(" ", versionPad),
-				strings.Repeat(" ", sizePad), sizeStyle.Render(size))
+				selName.Render(name), strings.Repeat(" ", namePad),
+				lineVersionStyle.Render(version), strings.Repeat(" ", versionPad),
+				strings.Repeat(" ", sizePad), lineSizeStyle.Render(size))
 			b.WriteString(row)
 		} else {
 			row := fmt.Sprintf("   %s %s %s%s  %s%s  %s%s\n",
 				selMarker, badgeStyle.Render(badge),
-				normalLine.Render(name), strings.Repeat(" ", namePad),
-				versionStyle.Render(version), strings.Repeat(" ", versionPad),
-				strings.Repeat(" ", sizePad), sizeStyle.Render(size))
+				lineNameStyle.Render(name), strings.Repeat(" ", namePad),
+				lineVersionStyle.Render(version), strings.Repeat(" ", versionPad),
+				strings.Repeat(" ", sizePad), lineSizeStyle.Render(size))
 			b.WriteString(row)
 		}
 	}

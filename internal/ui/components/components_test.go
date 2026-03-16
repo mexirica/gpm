@@ -105,27 +105,27 @@ func TestRenderPackageDetailMaxLines(t *testing.T) {
 	}
 }
 
-func TestRenderSearchPrompt(t *testing.T) {
-	result := RenderSearchPrompt("vim", false)
+func TestRenderQueryPrompt(t *testing.T) {
+	result := RenderQueryPrompt("vim", false)
 	if !strings.Contains(result, "vim") {
-		t.Error("search prompt should contain query")
+		t.Error("query prompt should contain query")
 	}
 	if !strings.Contains(result, "\u276f") {
-		t.Error("search prompt should contain prompt char")
+		t.Error("query prompt should contain prompt char")
 	}
 }
 
-func TestRenderSearchPromptFocused(t *testing.T) {
-	result := RenderSearchPrompt("test", true)
+func TestRenderQueryPromptFocused(t *testing.T) {
+	result := RenderQueryPrompt("test", true)
 	if !strings.Contains(result, "\u2588") {
-		t.Error("focused search should show cursor block")
+		t.Error("focused query prompt should show cursor block")
 	}
 }
 
-func TestRenderSearchPromptEmpty(t *testing.T) {
-	result := RenderSearchPrompt("", false)
+func TestRenderQueryPromptEmpty(t *testing.T) {
+	result := RenderQueryPrompt("", false)
 	if result == "" {
-		t.Error("empty search prompt should still render")
+		t.Error("empty query prompt should still render")
 	}
 }
 
@@ -239,5 +239,17 @@ func TestRenderFetchFooterHelp(t *testing.T) {
 	}
 	if !strings.Contains(result, "enter") {
 		t.Error("should contain enter key hint")
+	}
+}
+
+func TestRenderPackageListHeldBadge(t *testing.T) {
+	pkgs := []model.Package{
+		{Name: "vim", Version: "8.2", Installed: true, Held: true},
+		{Name: "git", Version: "2.34", Installed: true},
+	}
+
+	result := RenderPackageList(pkgs, 0, 0, 10, 120, nil)
+	if !strings.Contains(result, "🔒") {
+		t.Error("held package should show lock badge")
 	}
 }

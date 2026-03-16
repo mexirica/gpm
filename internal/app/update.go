@@ -34,9 +34,6 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case silentUpdateDoneMsg:
 		return a.onSilentUpdateDone(msg)
 
-	case infoLoadedMsg:
-		return a.onPackageInfoLoaded(msg)
-
 	case searchResultMsg:
 		return a.onSearchResultLoaded(msg)
 
@@ -58,6 +55,12 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case autoremovableMsg:
 		return a.onAutoremovableLoaded(msg)
+
+	case holdListMsg:
+		return a.onHeldListLoaded(msg)
+
+	case holdFinishedMsg:
+		return a.onHoldFinished(msg)
 
 	case ppaListMsg:
 		return a.onPPAListLoaded(msg)
@@ -89,9 +92,6 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if a.transactionView {
 			return a.onTransactionKeypress(msg)
 		}
-		if a.filtering {
-			return a.onFilterKeypress(msg)
-		}
 		if a.searching {
 			return a.onSearchKeypress(msg)
 		}
@@ -112,30 +112,54 @@ func (a App) onAllPackagesLoaded(msg allPackagesMsg) (tea.Model, tea.Cmd) {
 	for _, p := range msg.upgradable {
 		a.upgradableMap[p.Name] = p
 	}
-	seen := make(map[string]bool, len(msg.installed)+len(msg.allNames))
-	var all []model.Package
+	// Populate infoCache from bulk-loaded data
+	a.infoCache = make(map[string]apt.PackageInfo, len(msg.bulkInfo))
+	for name, info := range msg.bulkInfo {
+		a.infoCache[name] = info
+	}
+
+	seen := make(map[string]bool, len(msg.installed)+len(msg.bulkInfo))
+	all := make([]model.Package, 0, len(msg.installed)+len(msg.bulkInfo))
 	for _, p := range msg.installed {
 		if up, ok := a.upgradableMap[p.Name]; ok {
 			p.Upgradable = true
 			p.NewVersion = up.NewVersion
+			p.SecurityUpdate = up.SecurityUpdate
+		}
+		if a.heldSet[p.Name] {
+			p.Held = true
+		}
+		// Enrich installed packages with bulk info if fields are missing
+		if info, ok := msg.bulkInfo[p.Name]; ok {
+			if p.Size == "" || p.Size == "-" {
+				p.Size = info.Size
+			}
+			if p.Section == "" {
+				p.Section = info.Section
+			}
+			if p.Architecture == "" {
+				p.Architecture = info.Architecture
+			}
 		}
 		all = append(all, p)
 		seen[p.Name] = true
 	}
-	for _, name := range msg.allNames {
+	for name, info := range msg.bulkInfo {
 		if !seen[name] {
-			pkg := model.Package{Name: name, Installed: false}
-			if info, ok := a.infoCache[name]; ok {
-				pkg.NewVersion = info.Version
-				pkg.Size = info.Size
-				pkg.Section = info.Section
-				pkg.Architecture = info.Architecture
+			pkg := model.Package{
+				Name:         name,
+				Installed:    false,
+				NewVersion:   info.Version,
+				Size:         info.Size,
+				Section:      info.Section,
+				Architecture: info.Architecture,
 			}
 			all = append(all, pkg)
 			seen[name] = true
 		}
 	}
 	a.allPackages = all
+	a.rebuildIndex()
 	a.installedCount = len(msg.installed)
 	firstLoad := !a.allNamesLoaded
 	a.allNamesLoaded = true
@@ -152,7 +176,6 @@ func (a App) onAllPackagesLoaded(msg allPackagesMsg) (tea.Model, tea.Cmd) {
 	if len(a.filtered) > 0 {
 		cmds = append(cmds, showPackageDetailCmd(a.filtered[0].Name))
 	}
-	cmds = append(cmds, a.preloadVisiblePackageInfo())
 	if firstLoad {
 		cmds = append(cmds, silentUpdateCmd())
 	}
@@ -162,15 +185,19 @@ func (a App) onAllPackagesLoaded(msg allPackagesMsg) (tea.Model, tea.Cmd) {
 func (a App) onSilentUpdateDone(msg silentUpdateDoneMsg) (tea.Model, tea.Cmd) {
 	changed := false
 
-	// Merge new package names
+	// Merge new package names (re-parse the package lists for new packages)
 	if len(msg.names) > 0 {
-		existing := make(map[string]bool, len(a.allPackages))
-		for _, p := range a.allPackages {
-			existing[p.Name] = true
-		}
 		for _, name := range msg.names {
-			if !existing[name] {
-				a.allPackages = append(a.allPackages, model.Package{Name: name})
+			if _, ok := a.pkgIndex[name]; !ok {
+				pkg := model.Package{Name: name}
+				if info, ok := a.infoCache[name]; ok {
+					pkg.NewVersion = info.Version
+					pkg.Size = info.Size
+					pkg.Section = info.Section
+					pkg.Architecture = info.Architecture
+				}
+				a.pkgIndex[name] = len(a.allPackages)
+				a.allPackages = append(a.allPackages, pkg)
 				changed = true
 			}
 		}
@@ -196,16 +223,21 @@ func (a App) onSilentUpdateDone(msg silentUpdateDoneMsg) (tea.Model, tea.Cmd) {
 		return a, nil
 	}
 
+	// Clear old upgradable flags using index for O(1) access
+	for name := range a.upgradableMap {
+		if idx, ok := a.pkgIndex[name]; ok {
+			a.allPackages[idx].Upgradable = false
+			a.allPackages[idx].NewVersion = ""
+			a.allPackages[idx].SecurityUpdate = false
+		}
+	}
 	a.upgradableMap = newMap
-	for i := range a.allPackages {
-		if up, ok := newMap[a.allPackages[i].Name]; ok {
-			a.allPackages[i].Upgradable = true
-			a.allPackages[i].NewVersion = up.NewVersion
-		} else {
-			if a.allPackages[i].Installed {
-				a.allPackages[i].Upgradable = false
-				a.allPackages[i].NewVersion = ""
-			}
+	// Set new upgradable flags
+	for name, up := range newMap {
+		if idx, ok := a.pkgIndex[name]; ok {
+			a.allPackages[idx].Upgradable = true
+			a.allPackages[idx].NewVersion = up.NewVersion
+			a.allPackages[idx].SecurityUpdate = up.SecurityUpdate
 		}
 	}
 	a.applyFilter()
@@ -217,75 +249,6 @@ func (a App) onSilentUpdateDone(msg silentUpdateDoneMsg) (tea.Model, tea.Cmd) {
 	} else {
 		a.pendingStatus = defaultStatus
 	}
-	return a, a.preloadVisiblePackageInfo()
-}
-
-func (a App) onPackageInfoLoaded(msg infoLoadedMsg) (tea.Model, tea.Cmd) {
-	for name, info := range msg.info {
-		a.infoCache[name] = info
-	}
-	for i := range a.allPackages {
-		if info, ok := msg.info[a.allPackages[i].Name]; ok {
-			if a.allPackages[i].Version == "" {
-				a.allPackages[i].NewVersion = info.Version
-			}
-			if a.allPackages[i].Size == "" {
-				a.allPackages[i].Size = info.Size
-			}
-			if a.allPackages[i].Section == "" {
-				a.allPackages[i].Section = info.Section
-			}
-			if a.allPackages[i].Architecture == "" {
-				a.allPackages[i].Architecture = info.Architecture
-			}
-		}
-	}
-
-	// If an advanced filter is active, re-apply it now that metadata has arrived.
-	if a.advancedFilter != "" {
-		wasLoadingMeta := a.loadingFilterMeta
-		a.loadingFilterMeta = false
-		if wasLoadingMeta {
-			a.loading = false
-		}
-		prevIdx := a.selectedIdx
-		prevOffset := a.scrollOffset
-		a.applyFilter()
-		if !wasLoadingMeta {
-			a.selectedIdx = prevIdx
-			a.scrollOffset = prevOffset
-		}
-		if a.selectedIdx >= len(a.filtered) {
-			a.selectedIdx = len(a.filtered) - 1
-			if a.selectedIdx < 0 {
-				a.selectedIdx = 0
-			}
-		}
-		a.status = fmt.Sprintf("%d packages matching filter", len(a.filtered))
-		var cmds []tea.Cmd
-		if wasLoadingMeta && len(a.filtered) > 0 {
-			cmds = append(cmds, showPackageDetailCmd(a.filtered[0].Name))
-			cmds = append(cmds, a.preloadVisiblePackageInfo())
-		}
-		return a, tea.Batch(cmds...)
-	}
-
-	for i := range a.filtered {
-		if info, ok := msg.info[a.filtered[i].Name]; ok {
-			if a.filtered[i].Version == "" {
-				a.filtered[i].NewVersion = info.Version
-			}
-			if a.filtered[i].Size == "" {
-				a.filtered[i].Size = info.Size
-			}
-			if a.filtered[i].Section == "" {
-				a.filtered[i].Section = info.Section
-			}
-			if a.filtered[i].Architecture == "" {
-				a.filtered[i].Architecture = info.Architecture
-			}
-		}
-	}
 	return a, nil
 }
 
@@ -296,18 +259,15 @@ func (a App) onSearchResultLoaded(msg searchResultMsg) (tea.Model, tea.Cmd) {
 		a.status = ui.ErrorStyle.Render(fmt.Sprintf("Error in search: %v", msg.err))
 		return a, nil
 	}
-	installedMap := make(map[string]model.Package, len(a.allPackages))
-	for _, p := range a.allPackages {
-		if p.Installed {
-			installedMap[p.Name] = p
-		}
-	}
 	for i := range msg.pkgs {
 		if up, ok := a.upgradableMap[msg.pkgs[i].Name]; ok {
 			msg.pkgs[i].Upgradable = true
 			msg.pkgs[i].NewVersion = up.NewVersion
+			msg.pkgs[i].SecurityUpdate = up.SecurityUpdate
 		}
-		if inst, ok := installedMap[msg.pkgs[i].Name]; ok {
+		if idx, ok := a.pkgIndex[msg.pkgs[i].Name]; ok && a.allPackages[idx].Installed {
+			inst := a.allPackages[idx]
+			msg.pkgs[i].Installed = true
 			msg.pkgs[i].Version = inst.Version
 			msg.pkgs[i].Size = inst.Size
 			msg.pkgs[i].Section = inst.Section
@@ -324,7 +284,7 @@ func (a App) onSearchResultLoaded(msg searchResultMsg) (tea.Model, tea.Cmd) {
 	a.scrollOffset = 0
 	a.status = fmt.Sprintf("%d results for '%s'", len(msg.pkgs), a.filterQuery)
 	if len(a.filtered) > 0 {
-		return a, tea.Batch(showPackageDetailCmd(a.filtered[0].Name), a.preloadVisiblePackageInfo())
+		return a, showPackageDetailCmd(a.filtered[0].Name)
 	}
 	a.detailInfo = ""
 	a.detailName = ""
@@ -357,21 +317,18 @@ func (a App) onPackageDetailLoaded(msg detailLoadedMsg) (tea.Model, tea.Cmd) {
 					break
 				}
 			}
-			for i := range a.allPackages {
-				if a.allPackages[i].Name == msg.name {
-					if a.allPackages[i].Version == "" && a.allPackages[i].NewVersion == "" {
-						a.allPackages[i].NewVersion = pi.Version
-					}
-					if a.allPackages[i].Size == "" {
-						a.allPackages[i].Size = pi.Size
-					}
-					if a.allPackages[i].Section == "" {
-						a.allPackages[i].Section = pi.Section
-					}
-					if a.allPackages[i].Architecture == "" {
-						a.allPackages[i].Architecture = pi.Architecture
-					}
-					break
+			if idx, ok := a.pkgIndex[msg.name]; ok {
+				if a.allPackages[idx].Version == "" && a.allPackages[idx].NewVersion == "" {
+					a.allPackages[idx].NewVersion = pi.Version
+				}
+				if a.allPackages[idx].Size == "" {
+					a.allPackages[idx].Size = pi.Size
+				}
+				if a.allPackages[idx].Section == "" {
+					a.allPackages[idx].Section = pi.Section
+				}
+				if a.allPackages[idx].Architecture == "" {
+					a.allPackages[idx].Architecture = pi.Architecture
 				}
 			}
 		}
@@ -419,7 +376,11 @@ func (a App) onExecFinished(msg execFinishedMsg) (tea.Model, tea.Cmd) {
 	}
 	a.statusLock = time.Now()
 
-	cmds := []tea.Cmd{reloadAllPackages, loadAutoremovableCmd(), clearStatusAfter(2 * time.Second)}
+	if success && msg.op != "update" && msg.op != "ppa-add" && msg.op != "ppa-remove" {
+		a.applyOptimisticUpdate(msg.op, pkgs)
+	}
+
+	cmds := []tea.Cmd{reloadAllPackages, loadAutoremovableCmd(), loadHeldCmd(), clearStatusAfter(2 * time.Second)}
 	if msg.op == "ppa-add" || msg.op == "ppa-remove" {
 		cmds = append(cmds, listPPAsCmd())
 	}
@@ -518,6 +479,44 @@ func (a App) onAutoremovableLoaded(msg autoremovableMsg) (tea.Model, tea.Cmd) {
 		}
 	}
 	return a, nil
+}
+
+func (a App) onHeldListLoaded(msg holdListMsg) (tea.Model, tea.Cmd) {
+	if msg.err != nil {
+		a.errlogStore.Log("held-list", msg.err.Error())
+		a.heldSet = make(map[string]bool)
+		return a, nil
+	}
+	a.heldSet = make(map[string]bool, len(msg.names))
+	for _, name := range msg.names {
+		a.heldSet[name] = true
+	}
+	for i := range a.allPackages {
+		a.allPackages[i].Held = a.heldSet[a.allPackages[i].Name]
+	}
+	a.applyFilter()
+	return a, nil
+}
+
+func (a App) onHoldFinished(msg holdFinishedMsg) (tea.Model, tea.Cmd) {
+	if msg.err != nil {
+		a.errlogStore.Log("hold", msg.err.Error())
+		a.holdFailed = true
+	}
+	a.holdPending--
+	if a.holdPending > 0 {
+		return a, nil
+	}
+	a.loading = false
+	failed := a.holdFailed
+	a.holdFailed = false
+	if failed {
+		a.status = ui.ErrorStyle.Render("Error: hold/unhold failed")
+		return a, tea.Batch(loadHeldCmd(), clearStatusAfter(2*time.Second))
+	}
+	a.status = ui.SuccessStyle.Render(fmt.Sprintf("✔ %s completed!", msg.op))
+	a.statusLock = time.Now()
+	return a, tea.Batch(loadHeldCmd(), clearStatusAfter(2*time.Second))
 }
 
 func (a App) onPPAListLoaded(msg ppaListMsg) (tea.Model, tea.Cmd) {

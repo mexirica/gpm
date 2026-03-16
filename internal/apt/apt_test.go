@@ -143,6 +143,42 @@ curl/noble 8.5.0-1 amd64 [upgradable from: 7.88.1-1]`
 	if vim.Version != "2:8.2.4919-1" {
 		t.Errorf("expected old version '2:8.2.4919-1', got '%s'", vim.Version)
 	}
+	if vim.SecurityUpdate {
+		t.Error("expected SecurityUpdate=false for non-security repo")
+	}
+}
+
+func TestParseUpgradableOutputSecurityUpdate(t *testing.T) {
+	input := `Listing... Done
+vim/noble-security 2:9.1.0-1 amd64 [upgradable from: 2:8.2.4919-1]
+curl/noble 8.5.0-1 amd64 [upgradable from: 7.88.1-1]
+libssl3/noble-security,noble-updates 3.0.14-1 amd64 [upgradable from: 3.0.13-1]
+websecurity-tools/my-cybersecurity-ppa 1.2.0-1 amd64 [upgradable from: 1.1.0-1]`
+
+	pkgs := parseUpgradableOutput(input)
+	if len(pkgs) != 4 {
+		t.Fatalf("expected 4 packages, got %d", len(pkgs))
+	}
+
+	vim := pkgs[0]
+	if !vim.SecurityUpdate {
+		t.Error("expected SecurityUpdate=true for security repo")
+	}
+
+	curl := pkgs[1]
+	if curl.SecurityUpdate {
+		t.Error("expected SecurityUpdate=false for non-security repo")
+	}
+
+	libssl := pkgs[2]
+	if !libssl.SecurityUpdate {
+		t.Error("expected SecurityUpdate=true for comma-separated repo with security origin")
+	}
+
+	websecTools := pkgs[3]
+	if websecTools.SecurityUpdate {
+		t.Error("expected SecurityUpdate=false for PPA containing 'security' substring")
+	}
 }
 
 func TestParseUpgradableOutputSkipsListing(t *testing.T) {

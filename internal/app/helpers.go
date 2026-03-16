@@ -10,7 +10,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/mexirica/aptui/internal/apt"
 	"github.com/mexirica/aptui/internal/filter"
 	"github.com/mexirica/aptui/internal/fuzzy"
 	"github.com/mexirica/aptui/internal/model"
@@ -53,7 +52,6 @@ func (a *App) activateTab() tea.Cmd {
 	if len(a.filtered) > 0 {
 		cmds = append(cmds, showPackageDetailCmd(a.filtered[0].Name))
 	}
-	cmds = append(cmds, a.preloadVisiblePackageInfo())
 	a.status = fmt.Sprintf("%d packages (%s) ", len(a.filtered), tabDefs[a.activeTab].name)
 	return tea.Batch(cmds...)
 }
@@ -85,8 +83,12 @@ func (a *App) applyFilter() {
 		source = a.allPackages
 	}
 
-	af := filter.Parse(a.advancedFilter)
-	if !af.IsEmpty() {
+	af := filter.Parse(a.filterQuery)
+
+	// Apply structured filter criteria (section:, arch:, size>, etc.)
+	if af.Section != "" || af.Architecture != "" || af.Size != nil ||
+		af.Installed != nil || af.Upgradable != nil ||
+		af.Name != "" || af.Version != "" || af.Description != "" {
 		var filtered []model.Package
 		for _, p := range source {
 			pd := filter.PackageData{
@@ -107,14 +109,16 @@ func (a *App) applyFilter() {
 		source = filtered
 	}
 
-	if a.filterQuery == "" {
+	// Apply fuzzy search on free text (unrecognized tokens)
+	freeText := af.FreeText
+	if freeText == "" {
 		a.filtered = source
 	} else {
-		minScore := fuzzy.MinQuality(len(a.filterQuery))
+		minScore := fuzzy.MinQuality(len(freeText))
 		var scored []scoredPackage
 		for _, p := range source {
-			nameRes := fuzzy.Score(a.filterQuery, p.Name)
-			descRes := fuzzy.Score(a.filterQuery, p.Description)
+			nameRes := fuzzy.Score(freeText, p.Name)
+			descRes := fuzzy.Score(freeText, p.Description)
 
 			s := 0
 			matched := false
@@ -193,7 +197,7 @@ func (a App) effectiveSortInfo() filter.SortInfo {
 	if a.sortColumn != filter.SortNone {
 		return filter.SortInfo{Column: a.sortColumn, Desc: a.sortDesc}
 	}
-	af := filter.Parse(a.advancedFilter)
+	af := filter.Parse(a.filterQuery)
 	return filter.SortInfo{Column: af.OrderBy, Desc: af.OrderDesc}
 }
 
@@ -214,79 +218,69 @@ func sortFieldEmpty(p model.Package, col filter.SortColumn) bool {
 	}
 }
 
-// loadFilterCandidateInfo fetches metadata only for packages that pass all
-// non-metadata filters but are missing metadata needed by the active filter.
-// This is much faster than loading ALL packages since non-metadata filters
-// (name, version, installed, etc.) narrow the set first.
-func (a *App) loadFilterCandidateInfo() tea.Cmd {
-	af := filter.Parse(a.advancedFilter)
-	if !af.NeedsMetadata() {
-		return nil
-	}
-
-	var names []string
-	for _, p := range a.allPackages {
-		// Skip packages already cached
-		if _, ok := a.infoCache[p.Name]; ok {
-			continue
-		}
-		// Skip packages that already have metadata populated
-		if p.Section != "" || p.Architecture != "" || p.Size != "" {
-			continue
-		}
-		// Only load metadata for packages that pass the non-metadata filters
-		pd := filter.PackageData{
-			Name:        p.Name,
-			Version:     p.Version,
-			NewVersion:  p.NewVersion,
-			Description: p.Description,
-			Installed:   p.Installed,
-			Upgradable:  p.Upgradable,
-		}
-		if af.MatchWithoutMetadata(pd) {
-			names = append(names, p.Name)
-		}
-	}
-	if len(names) == 0 {
-		return nil
-	}
-	return func() tea.Msg {
-		info := apt.BatchGetInfo(names)
-		return infoLoadedMsg{info: info}
+// rebuildIndex rebuilds the package name to index mapping for O(1) lookups.
+func (a *App) rebuildIndex() {
+	a.pkgIndex = make(map[string]int, len(a.allPackages))
+	for i, p := range a.allPackages {
+		a.pkgIndex[p.Name] = i
 	}
 }
 
-// preloadVisiblePackageInfo fetches version/size info for packages near the visible
-// viewport (±20/+50 rows) that aren't already cached.
-func (a *App) preloadVisiblePackageInfo() tea.Cmd {
-	if len(a.filtered) == 0 {
-		return nil
-	}
-	h := a.packageListHeight()
-	start := a.scrollOffset
-	end := start + h + 50
-	if start > 20 {
-		start -= 20
-	} else {
-		start = 0
-	}
-	if end > len(a.filtered) {
-		end = len(a.filtered)
-	}
-	var names []string
-	for i := start; i < end; i++ {
-		name := a.filtered[i].Name
-		if _, ok := a.infoCache[name]; !ok {
-			names = append(names, name)
+// applyOptimisticUpdate updates in-memory package state immediately after
+// a successful operation, avoiding the need to wait for a full reload.
+func (a *App) applyOptimisticUpdate(op string, pkgs []string) {
+	switch op {
+	case "install":
+		for _, name := range pkgs {
+			if idx, ok := a.pkgIndex[name]; ok {
+				if !a.allPackages[idx].Installed {
+					a.installedCount++
+				}
+				a.allPackages[idx].Installed = true
+				a.allPackages[idx].Upgradable = false
+				a.allPackages[idx].NewVersion = ""
+				delete(a.upgradableMap, name)
+			}
 		}
+	case "remove", "purge":
+		for _, name := range pkgs {
+			if idx, ok := a.pkgIndex[name]; ok {
+				if a.allPackages[idx].Installed {
+					a.installedCount--
+				}
+				a.allPackages[idx].Installed = false
+				a.allPackages[idx].Upgradable = false
+				a.allPackages[idx].NewVersion = ""
+				delete(a.upgradableMap, name)
+			}
+		}
+	case "upgrade", "upgrade-all":
+		for _, name := range pkgs {
+			if idx, ok := a.pkgIndex[name]; ok {
+				if up, ok := a.upgradableMap[name]; ok {
+					a.allPackages[idx].Version = up.NewVersion
+				}
+				a.allPackages[idx].Upgradable = false
+				a.allPackages[idx].NewVersion = ""
+				delete(a.upgradableMap, name)
+			}
+		}
+	case "cleanup-all":
+		for _, name := range pkgs {
+			if idx, ok := a.pkgIndex[name]; ok {
+				if a.allPackages[idx].Installed {
+					a.installedCount--
+				}
+				a.allPackages[idx].Installed = false
+				a.allPackages[idx].Upgradable = false
+				a.allPackages[idx].NewVersion = ""
+				delete(a.upgradableMap, name)
+			}
+		}
+		a.autoremovable = nil
+		a.autoremovableSet = make(map[string]bool)
 	}
-	if len(names) == 0 {
-		return nil
-	}
-	return func() tea.Msg {
-		info := apt.BatchGetInfo(names)
-		return infoLoadedMsg{info: info}
-	}
+	a.applyFilter()
 }
 
 func (a *App) adjustPackageScroll() {
@@ -322,10 +316,6 @@ func (a *App) adjustTransactionScroll() {
 // searchBarY returns the Y coordinate of the search bar row.
 func (a App) searchBarY() int {
 	helpLines := strings.Count(a.help.View(a.keys), "\n") + 1
-	filterLines := 0
-	if a.filtering || a.advancedFilter != "" {
-		filterLines = 1
-	}
 	if !a.loading && len(a.filtered) > 0 {
 		detailLines := a.packageDetailHeight()
 		if a.detailName == "" || a.detailInfo == "" {
@@ -336,9 +326,9 @@ func (a App) searchBarY() int {
 			pkg := a.filtered[idx]
 			detailLines = strings.Count(a.renderBasicDetail(pkg), "\n")
 		}
-		return a.height - 4 - filterLines - detailLines - helpLines
+		return a.height - 4 - detailLines - helpLines
 	}
-	return a.height - 3 - filterLines - helpLines
+	return a.height - 3 - helpLines
 }
 
 func (a App) packageListHeight() int {

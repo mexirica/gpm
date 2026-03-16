@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/mexirica/aptui/internal/apt"
 	"github.com/mexirica/aptui/internal/model"
 	"github.com/mexirica/aptui/internal/ui"
 )
@@ -407,7 +408,12 @@ func TestAllPackagesMsg(t *testing.T) {
 	a := newTestApp()
 
 	msg := allPackagesMsg{
-		allNames:   []string{"vim", "git", "curl", "htop"},
+		bulkInfo: map[string]apt.PackageInfo{
+			"vim":  {Version: "8.2", Section: "editors", Architecture: "amd64"},
+			"git":  {Version: "2.40", Section: "vcs", Architecture: "amd64"},
+			"curl": {Version: "7.88", Section: "web", Architecture: "amd64"},
+			"htop": {Version: "3.2", Section: "utils", Architecture: "amd64"},
+		},
 		installed:  []model.Package{{Name: "vim", Installed: true, Version: "8.2"}},
 		upgradable: []model.Package{{Name: "vim", Installed: true, Upgradable: true, NewVersion: "9.0"}},
 		err:        nil,
@@ -464,6 +470,172 @@ func TestExecFinishedMsg(t *testing.T) {
 
 	if app.pendingExecCount != 0 {
 		t.Errorf("pendingExecCount should be 0, got %d", app.pendingExecCount)
+	}
+}
+
+func TestOptimisticUpdateInstall(t *testing.T) {
+	a := newTestApp()
+	a.allPackages = []model.Package{
+		{Name: "vim", Installed: false},
+		{Name: "git", Installed: true},
+		{Name: "curl", Installed: false},
+	}
+	a.rebuildIndex()
+	a.installedCount = 1
+	a.pendingExecOp = "install"
+	a.pendingExecPkgs = []string{"vim", "curl"}
+	a.pendingExecCount = 1
+	a.loading = true
+
+	msg := execFinishedMsg{op: "install", name: "vim curl", err: nil}
+	m, _ := a.Update(msg)
+	app := m.(App)
+
+	if !app.allPackages[0].Installed {
+		t.Error("vim should be marked as installed after optimistic update")
+	}
+	if !app.allPackages[2].Installed {
+		t.Error("curl should be marked as installed after optimistic update")
+	}
+	if app.installedCount != 3 {
+		t.Errorf("expected installedCount=3, got %d", app.installedCount)
+	}
+}
+
+func TestOptimisticUpdateRemove(t *testing.T) {
+	a := newTestApp()
+	a.allPackages = []model.Package{
+		{Name: "vim", Installed: true},
+		{Name: "git", Installed: true},
+	}
+	a.rebuildIndex()
+	a.installedCount = 2
+	a.pendingExecOp = "remove"
+	a.pendingExecPkgs = []string{"vim"}
+	a.pendingExecCount = 1
+	a.loading = true
+
+	msg := execFinishedMsg{op: "remove", name: "vim", err: nil}
+	m, _ := a.Update(msg)
+	app := m.(App)
+
+	if app.allPackages[0].Installed {
+		t.Error("vim should not be installed after remove")
+	}
+	if !app.allPackages[1].Installed {
+		t.Error("git should still be installed")
+	}
+	if app.installedCount != 1 {
+		t.Errorf("expected installedCount=1, got %d", app.installedCount)
+	}
+}
+
+func TestOptimisticUpdateUpgrade(t *testing.T) {
+	a := newTestApp()
+	a.allPackages = []model.Package{
+		{Name: "vim", Installed: true, Upgradable: true, Version: "8.2", NewVersion: "9.0"},
+	}
+	a.rebuildIndex()
+	a.upgradableMap = map[string]model.Package{
+		"vim": {Name: "vim", NewVersion: "9.0"},
+	}
+	a.installedCount = 1
+	a.pendingExecOp = "upgrade"
+	a.pendingExecPkgs = []string{"vim"}
+	a.pendingExecCount = 1
+	a.loading = true
+
+	msg := execFinishedMsg{op: "upgrade", name: "vim", err: nil}
+	m, _ := a.Update(msg)
+	app := m.(App)
+
+	if app.allPackages[0].Upgradable {
+		t.Error("vim should not be upgradable after upgrade")
+	}
+	if app.allPackages[0].Version != "9.0" {
+		t.Errorf("expected version '9.0', got '%s'", app.allPackages[0].Version)
+	}
+	if len(app.upgradableMap) != 0 {
+		t.Errorf("expected empty upgradableMap, got %d entries", len(app.upgradableMap))
+	}
+}
+
+func TestOptimisticUpdateSkippedOnFailure(t *testing.T) {
+	a := newTestApp()
+	a.allPackages = []model.Package{
+		{Name: "vim", Installed: false},
+	}
+	a.rebuildIndex()
+	a.installedCount = 0
+	a.pendingExecOp = "install"
+	a.pendingExecPkgs = []string{"vim"}
+	a.pendingExecCount = 1
+	a.loading = true
+
+	msg := execFinishedMsg{op: "install", name: "vim", err: fmt.Errorf("permission denied")}
+	m, _ := a.Update(msg)
+	app := m.(App)
+
+	if app.allPackages[0].Installed {
+		t.Error("vim should NOT be installed after failed install")
+	}
+	if app.installedCount != 0 {
+		t.Errorf("expected installedCount=0 after failure, got %d", app.installedCount)
+	}
+}
+
+func TestOptimisticUpdateCleanupAll(t *testing.T) {
+	a := newTestApp()
+	a.allPackages = []model.Package{
+		{Name: "vim", Installed: true, NewVersion: "9.0", Upgradable: true},
+		{Name: "git", Installed: true},
+		{Name: "curl", Installed: false},
+	}
+	a.rebuildIndex()
+	a.installedCount = 2
+	a.upgradableMap = map[string]model.Package{
+		"vim": {Name: "vim", NewVersion: "9.0"},
+	}
+	a.autoremovable = []string{"vim", "git"}
+	a.autoremovableSet = map[string]bool{"vim": true, "git": true}
+
+	a.applyOptimisticUpdate("cleanup-all", []string{"vim", "git"})
+
+	if a.allPackages[0].Installed {
+		t.Error("vim should not be installed after cleanup-all")
+	}
+	if a.allPackages[1].Installed {
+		t.Error("git should not be installed after cleanup-all")
+	}
+	if a.allPackages[0].NewVersion != "" {
+		t.Errorf("vim NewVersion should be cleared, got %q", a.allPackages[0].NewVersion)
+	}
+	if a.allPackages[0].Upgradable {
+		t.Error("vim should not be upgradable after cleanup-all")
+	}
+	if a.installedCount != 0 {
+		t.Errorf("expected installedCount=0, got %d", a.installedCount)
+	}
+	if a.autoremovable != nil {
+		t.Error("autoremovable should be nil after cleanup-all")
+	}
+	if len(a.autoremovableSet) != 0 {
+		t.Errorf("autoremovableSet should be empty, got %d", len(a.autoremovableSet))
+	}
+}
+
+func TestRebuildIndex(t *testing.T) {
+	a := newTestApp()
+	a.allPackages = []model.Package{
+		{Name: "vim"}, {Name: "git"}, {Name: "curl"},
+	}
+	a.rebuildIndex()
+
+	if len(a.pkgIndex) != 3 {
+		t.Errorf("expected 3 entries in pkgIndex, got %d", len(a.pkgIndex))
+	}
+	if idx, ok := a.pkgIndex["git"]; !ok || idx != 1 {
+		t.Errorf("expected pkgIndex[git]=1, got %d (ok=%v)", idx, ok)
 	}
 }
 
@@ -753,5 +925,176 @@ func TestOnTabClickSameTab(t *testing.T) {
 	}
 	if cmd != nil {
 		t.Error("expected nil cmd when clicking already-active tab")
+	}
+}
+
+func TestHoldListMsg(t *testing.T) {
+	a := newTestApp()
+	a.allPackages = []model.Package{
+		{Name: "vim", Installed: true},
+		{Name: "git", Installed: true},
+		{Name: "curl", Installed: false},
+	}
+	a.rebuildIndex()
+	a.applyFilter()
+
+	msg := holdListMsg{names: []string{"vim"}, err: nil}
+	m, _ := a.Update(msg)
+	app := m.(App)
+
+	if !app.heldSet["vim"] {
+		t.Error("vim should be in heldSet")
+	}
+	if app.heldSet["git"] {
+		t.Error("git should not be in heldSet")
+	}
+	if !app.allPackages[0].Held {
+		t.Error("vim should have Held=true")
+	}
+	if app.allPackages[1].Held {
+		t.Error("git should have Held=false")
+	}
+}
+
+func TestHoldListMsgError(t *testing.T) {
+	a := newTestApp()
+	msg := holdListMsg{err: fmt.Errorf("apt-mark error")}
+	m, _ := a.Update(msg)
+	app := m.(App)
+
+	if len(app.heldSet) != 0 {
+		t.Error("heldSet should be empty on error")
+	}
+}
+
+func TestHoldSelectedPackage(t *testing.T) {
+	a := newTestApp()
+	a.allPackages = []model.Package{
+		{Name: "vim", Installed: true},
+	}
+	a.rebuildIndex()
+	a.applyFilter()
+	a.selectedIdx = 0
+	a.heldSet = make(map[string]bool)
+
+	m, cmd := a.holdSelectedPackages()
+	app := m.(App)
+
+	if !app.loading {
+		t.Error("should be loading after hold")
+	}
+	if cmd == nil {
+		t.Error("expected non-nil cmd")
+	}
+}
+
+func TestUnholdSelectedPackage(t *testing.T) {
+	a := newTestApp()
+	a.allPackages = []model.Package{
+		{Name: "vim", Installed: true, Held: true},
+	}
+	a.rebuildIndex()
+	a.applyFilter()
+	a.selectedIdx = 0
+	a.heldSet = map[string]bool{"vim": true}
+
+	m, cmd := a.holdSelectedPackages()
+	app := m.(App)
+
+	if !app.loading {
+		t.Error("should be loading after unhold")
+	}
+	if cmd == nil {
+		t.Error("expected non-nil cmd")
+	}
+}
+
+func TestHoldNotInstalledPackage(t *testing.T) {
+	a := newTestApp()
+	a.allPackages = []model.Package{
+		{Name: "vim", Installed: false},
+	}
+	a.rebuildIndex()
+	a.applyFilter()
+	a.selectedIdx = 0
+	a.heldSet = make(map[string]bool)
+
+	m, _ := a.holdSelectedPackages()
+	app := m.(App)
+
+	if app.loading {
+		t.Error("should not be loading for non-installed package")
+	}
+	if !strings.Contains(app.status, "not installed") {
+		t.Errorf("expected 'not installed' status, got '%s'", app.status)
+	}
+}
+
+func TestHeldFlagPropagatedOnLoad(t *testing.T) {
+	a := newTestApp()
+	a.heldSet = map[string]bool{"vim": true}
+
+	msg := allPackagesMsg{
+		bulkInfo:   map[string]apt.PackageInfo{"vim": {Version: "8.2"}},
+		installed:  []model.Package{{Name: "vim", Installed: true, Version: "8.2"}},
+		upgradable: nil,
+		err:        nil,
+	}
+
+	m, _ := a.Update(msg)
+	app := m.(App)
+
+	idx := app.pkgIndex["vim"]
+	if !app.allPackages[idx].Held {
+		t.Error("vim should have Held=true after allPackagesMsg when in heldSet")
+	}
+}
+
+func TestUpgradeBlockedForHeldPackage(t *testing.T) {
+	a := newTestApp()
+	a.allPackages = []model.Package{
+		{Name: "vim", Installed: true, Upgradable: true, Held: true, Version: "8.2", NewVersion: "9.0"},
+	}
+	a.rebuildIndex()
+	a.applyFilter()
+	a.selectedIdx = 0
+	a.heldSet = map[string]bool{"vim": true}
+
+	m, cmd := a.upgradeSelectedPackages()
+	app := m.(App)
+
+	if app.loading {
+		t.Error("should not start upgrade for held package")
+	}
+	if !strings.Contains(app.status, "held") {
+		t.Errorf("expected status to mention 'held', got '%s'", app.status)
+	}
+	if cmd != nil {
+		t.Error("expected nil cmd when upgrade is blocked")
+	}
+}
+
+func TestUpgradeAllSkipsHeldPackages(t *testing.T) {
+	a := newTestApp()
+	a.allPackages = []model.Package{
+		{Name: "vim", Installed: true, Upgradable: true, Held: true, Version: "8.2", NewVersion: "9.0"},
+		{Name: "git", Installed: true, Upgradable: true, Version: "2.34", NewVersion: "2.40"},
+	}
+	a.rebuildIndex()
+	a.applyFilter()
+	a.upgradableMap = map[string]model.Package{
+		"vim": {Name: "vim", NewVersion: "9.0"},
+		"git": {Name: "git", NewVersion: "2.40"},
+	}
+	a.heldSet = map[string]bool{"vim": true}
+
+	m, _ := a.upgradeAllPackages()
+	app := m.(App)
+
+	if len(app.pendingExecPkgs) != 1 {
+		t.Errorf("expected 1 package to upgrade, got %d", len(app.pendingExecPkgs))
+	}
+	if len(app.pendingExecPkgs) == 1 && app.pendingExecPkgs[0] != "git" {
+		t.Errorf("expected 'git' to upgrade, got '%s'", app.pendingExecPkgs[0])
 	}
 }

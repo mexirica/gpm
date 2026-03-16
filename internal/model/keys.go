@@ -9,12 +9,12 @@ type KeyMap struct {
 	Enter       key.Binding
 	Back        key.Binding
 	Search      key.Binding
-	Filter      key.Binding
 	Install     key.Binding
 	Remove      key.Binding
 	Upgrade     key.Binding
 	UpgradeAll  key.Binding
 	Purge       key.Binding
+	Hold        key.Binding
 	Select      key.Binding
 	SelectAll   key.Binding
 	Refresh     key.Binding
@@ -52,11 +52,7 @@ var Keys = KeyMap{
 	),
 	Search: key.NewBinding(
 		key.WithKeys("/"),
-		key.WithHelp("/", "search"),
-	),
-	Filter: key.NewBinding(
-		key.WithKeys("F"),
-		key.WithHelp("F", "filter"),
+		key.WithHelp("/", "search/filter"),
 	),
 	Install: key.NewBinding(
 		key.WithKeys("i"),
@@ -77,6 +73,10 @@ var Keys = KeyMap{
 	Purge: key.NewBinding(
 		key.WithKeys("p"),
 		key.WithHelp("p", "purge"),
+	),
+	Hold: key.NewBinding(
+		key.WithKeys("H"),
+		key.WithHelp("H", "hold/unhold"),
 	),
 	Select: key.NewBinding(
 		key.WithKeys(" "),
@@ -147,14 +147,14 @@ var Keys = KeyMap{
 }
 
 func (k KeyMap) ShortHelp() []key.Binding {
-	return []key.Binding{k.Search, k.Filter, k.Select, k.SelectAll, k.Install, k.Remove, k.Help, k.Quit}
+	return []key.Binding{k.Search, k.Select, k.SelectAll, k.Install, k.Remove, k.Help, k.Quit}
 }
 
 func (k KeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.Up, k.Down, k.PageUp, k.PageDown, k.Tab},
-		{k.Enter, k.Select, k.SelectAll, k.Search, k.Filter},
-		{k.Install, k.Remove, k.Upgrade, k.UpgradeAll, k.Purge},
+		{k.Enter, k.Select, k.SelectAll, k.Search},
+		{k.Install, k.Remove, k.Upgrade, k.UpgradeAll, k.Purge, k.Hold},
 		{k.CleanupAll, k.ErrLogClear, k.AptUpdate, k.Fetch, k.PPA, k.Refresh, k.Transaction},
 		{k.TranUndo, k.TranRedo, k.Help, k.Quit},
 	}

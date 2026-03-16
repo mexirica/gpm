@@ -7,7 +7,6 @@ import (
 	"github.com/charmbracelet/lipgloss"
 
 	"github.com/mexirica/aptui/internal/fetch"
-	"github.com/mexirica/aptui/internal/filter"
 	"github.com/mexirica/aptui/internal/model"
 	"github.com/mexirica/aptui/internal/ui"
 	"github.com/mexirica/aptui/internal/ui/components"
@@ -64,15 +63,7 @@ func (a App) View() string {
 	if a.searching {
 		footer = append(footer, "  "+a.searchInput.View())
 	} else {
-		footer = append(footer, components.RenderSearchPrompt(a.filterQuery, false))
-	}
-
-	// Advanced filter bar
-	if a.filtering {
-		footer = append(footer, "  "+a.filterInput.View())
-	} else if a.advancedFilter != "" {
-		af := filter.Parse(a.advancedFilter)
-		footer = append(footer, components.RenderFilterPrompt(af.Describe(), false))
+		footer = append(footer, components.RenderQueryPrompt(a.filterQuery, false))
 	}
 
 	sep := lipgloss.NewStyle().Foreground(ui.ColorPrimary).Render(strings.Repeat("─", w))
@@ -81,7 +72,9 @@ func (a App) View() string {
 	if !a.loading && len(a.filtered) > 0 && a.detailName != "" && a.detailInfo != "" {
 		pkg := a.filtered[a.selectedIdx]
 		statusLine := "Status: Not installed"
-		if pkg.Upgradable {
+		if pkg.Held {
+			statusLine = "Status: Held"
+		} else if pkg.Upgradable {
 			statusLine = "Status: Upgrade available (" + pkg.Version + " → " + pkg.NewVersion + ")"
 		} else if pkg.Installed {
 			statusLine = "Status: Installed"
@@ -131,7 +124,10 @@ func (a App) renderBasicDetail(pkg model.Package) string {
 
 	status := "Not installed"
 	statusStyle := lipgloss.NewStyle().Foreground(ui.ColorSecondary)
-	if pkg.Upgradable {
+	if pkg.Held {
+		status = "Held"
+		statusStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF8C00")).Bold(true)
+	} else if pkg.Upgradable {
 		status = "Upgrade available"
 		statusStyle = lipgloss.NewStyle().Foreground(ui.ColorWarning).Bold(true)
 	} else if pkg.Installed {

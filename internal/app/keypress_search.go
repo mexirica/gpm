@@ -4,6 +4,8 @@ import (
 	"fmt"
 
 	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/mexirica/aptui/internal/filter"
 )
 
 func (a App) onSearchKeypress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
@@ -31,18 +33,24 @@ func (a App) submitSearch() (tea.Model, tea.Cmd) {
 		return a, nil
 	}
 	if len(a.filtered) == 0 {
+		af := filter.Parse(query)
+		searchTerm := af.FreeText
+		if searchTerm == "" {
+			a.status = fmt.Sprintf("No packages match filter: %s", query)
+			return a, nil
+		}
 		a.loading = true
-		a.status = fmt.Sprintf("Searching '%s' via apt-cache...", query)
-		return a, searchPackagesCmd(query)
+		a.status = fmt.Sprintf("Searching '%s' via apt-cache...", searchTerm)
+		return a, searchPackagesCmd(searchTerm)
 	}
 	a.status = fmt.Sprintf("%d packages matching '%s'", len(a.filtered), query)
-	return a, tea.Batch(showPackageDetailCmd(a.filtered[0].Name), a.preloadVisiblePackageInfo())
+	return a, showPackageDetailCmd(a.filtered[0].Name)
 }
 
 func (a App) cancelSearch() (tea.Model, tea.Cmd) {
 	a.searching = false
 	a.searchInput.Blur()
-	a.filterQuery = ""
+	a.filterQuery = a.filterQueryBeforeEdit
 	a.applyFilter()
 	a.status = fmt.Sprintf("%d packages ", len(a.filtered))
 	return a, nil
@@ -58,5 +66,5 @@ func (a App) updateSearchFilter(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if len(a.filtered) > 0 {
 		detailCmd = showPackageDetailCmd(a.filtered[0].Name)
 	}
-	return a, tea.Batch(cmd, detailCmd, a.preloadVisiblePackageInfo())
+	return a, tea.Batch(cmd, detailCmd)
 }

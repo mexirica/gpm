@@ -94,7 +94,6 @@ func parseSearchOutput(output string) []model.Package {
 		if len(parts) == 2 {
 			pkg.Description = strings.TrimSpace(parts[1])
 		}
-		pkg.Installed = IsInstalled(pkg.Name)
 		if pkg.Name != "" && !seen[pkg.Name] {
 			packages = append(packages, pkg)
 			seen[pkg.Name] = true
@@ -120,6 +119,14 @@ func parseUpgradableOutput(output string) []model.Package {
 			Name:       nameParts[0],
 			Installed:  true,
 			Upgradable: true,
+		}
+		if len(nameParts) == 2 {
+			for _, repo := range strings.Split(nameParts[1], ",") {
+				if strings.HasSuffix(repo, "-security") {
+					pkg.SecurityUpdate = true
+					break
+				}
+			}
 		}
 		if len(parts) >= 2 {
 			pkg.NewVersion = parts[1]

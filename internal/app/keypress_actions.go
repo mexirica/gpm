@@ -55,7 +55,6 @@ func (a App) scrollPackagesDown() (tea.Model, tea.Cmd) {
 	if len(a.filtered) > 0 {
 		cmds = append(cmds, showPackageDetailCmd(a.filtered[a.selectedIdx].Name))
 	}
-	cmds = append(cmds, a.preloadVisiblePackageInfo())
 	return a, tea.Batch(cmds...)
 }
 
@@ -69,7 +68,6 @@ func (a App) scrollPackagesUp() (tea.Model, tea.Cmd) {
 	if len(a.filtered) > 0 {
 		cmds = append(cmds, showPackageDetailCmd(a.filtered[a.selectedIdx].Name))
 	}
-	cmds = append(cmds, a.preloadVisiblePackageInfo())
 	return a, tea.Batch(cmds...)
 }
 
@@ -140,6 +138,9 @@ func (a App) dispatchPackageAction(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
 		return model, cmd, true
 	case "p":
 		model, cmd := a.purgeSelectedPackages()
+		return model, cmd, true
+	case "H":
+		model, cmd := a.holdSelectedPackages()
 		return model, cmd, true
 	case "c":
 		model, cmd := a.cleanupAllPackages()
@@ -230,10 +231,17 @@ func (a App) upgradeSelectedPackages() (tea.Model, tea.Cmd) {
 	var names []string
 	if len(a.selected) > 0 {
 		for name := range a.selected {
+			if a.heldSet[name] {
+				continue
+			}
 			names = append(names, name)
 		}
 	} else if len(a.filtered) > 0 && a.selectedIdx < len(a.filtered) {
 		pkg := a.filtered[a.selectedIdx]
+		if pkg.Held {
+			a.status = fmt.Sprintf("'%s' is held. Unhold it first (H).", pkg.Name)
+			return a, nil
+		}
 		if !pkg.Upgradable {
 			a.status = fmt.Sprintf("'%s' is already at the latest version.", pkg.Name)
 			return a, nil
@@ -255,10 +263,16 @@ func (a App) upgradeSelectedPackages() (tea.Model, tea.Cmd) {
 func (a App) upgradeAllPackages() (tea.Model, tea.Cmd) {
 	var names []string
 	for name := range a.upgradableMap {
-		names = append(names, name)
+		if !a.heldSet[name] {
+			names = append(names, name)
+		}
 	}
 	if len(names) == 0 {
-		a.status = "No upgradable packages found."
+		if len(a.upgradableMap) > 0 {
+			a.status = "All upgradable packages are held. Unhold them first (H)."
+		} else {
+			a.status = "No upgradable packages found."
+		}
 		return a, nil
 	}
 	a.pendingExecOp = "upgrade-all"
@@ -280,6 +294,47 @@ func (a App) cleanupAllPackages() (tea.Model, tea.Cmd) {
 	a.loading = true
 	a.status = fmt.Sprintf("Cleaning up all %d packages (sudo apt-get autoremove)...", len(a.autoremovable))
 	return a, autoremoveAllCmd(a.autoremovable)
+}
+
+func (a App) holdSelectedPackages() (tea.Model, tea.Cmd) {
+	var holdNames, unholdNames []string
+	if len(a.selected) > 0 {
+		for name := range a.selected {
+			if a.heldSet[name] {
+				unholdNames = append(unholdNames, name)
+			} else {
+				holdNames = append(holdNames, name)
+			}
+		}
+	} else if len(a.filtered) > 0 && a.selectedIdx < len(a.filtered) {
+		pkg := a.filtered[a.selectedIdx]
+		if !pkg.Installed {
+			a.status = fmt.Sprintf("'%s' is not installed.", pkg.Name)
+			return a, nil
+		}
+		if a.heldSet[pkg.Name] {
+			unholdNames = append(unholdNames, pkg.Name)
+		} else {
+			holdNames = append(holdNames, pkg.Name)
+		}
+	}
+	if len(holdNames) == 0 && len(unholdNames) == 0 {
+		return a, nil
+	}
+	a.loading = true
+	a.selected = make(map[string]bool)
+	if len(holdNames) > 0 && len(unholdNames) > 0 {
+		a.holdPending = 2
+		a.status = fmt.Sprintf("Toggling hold on %d packages...", len(holdNames)+len(unholdNames))
+		return a, tea.Batch(holdBatchCmd(holdNames), unholdBatchCmd(unholdNames))
+	}
+	a.holdPending = 1
+	if len(holdNames) > 0 {
+		a.status = fmt.Sprintf("Holding %d packages...", len(holdNames))
+		return a, holdBatchCmd(holdNames)
+	}
+	a.status = fmt.Sprintf("Unholding %d packages...", len(unholdNames))
+	return a, unholdBatchCmd(unholdNames)
 }
 
 func (a App) switchTab(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
