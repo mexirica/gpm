@@ -31,8 +31,7 @@ Built with [Bubble Tea](https://github.com/charmbracelet/bubbletea), [Lip Gloss]
 ## Features
 
 - **Browse all packages** — lists every available APT package with version and size info loaded lazily
-- **Fuzzy search** — live fuzzy filtering as you type, with fallback to `apt-cache search`
-- **Advanced filter** — powerful query language to filter by section, architecture, size, status and more ([docs](docs/filter.md))
+- **Search & filter** — single bar for fuzzy search and structured filters (section, architecture, size, status and more) ([docs](docs/filter.md))
 - **Column sorting** — sort packages by name, version, size, section or architecture (ascending/descending)
 - **Tabs** — switch between *All*, *Installed* and *Upgradable* views
 - **Multi-select** — mark multiple packages with `space`, then bulk install/remove/upgrade
@@ -93,21 +92,21 @@ sudo aptui
 
 | Key | Action |
 |---|---|
-| `/` | Open search bar |
-| `F` | Open [advanced filter](docs/filter.md) bar |
+| `/` or `F` | Open [search/filter](docs/filter.md) bar |
 | `enter` | Confirm search / apply filter |
 | `esc` | Clear search / filter / go back |
 
-#### Filter examples
+#### Examples
 
 ```
+vim                          # fuzzy search for "vim"
+section:editors vim          # filter by section + fuzzy search combined
 installed size>10MB          # installed packages larger than 10 MB
 section:utils order:name     # packages in "utils" section, sorted A→Z
 order:size:desc              # all packages sorted by size, largest first
-order:size:asc               # all packages sorted by size, smallest first
 ```
 
-See the full [filter documentation](docs/filter.md) for all available options.
+See the full [search & filter documentation](docs/filter.md) for all available options.
 
 ### Selection
 
@@ -122,8 +121,8 @@ See the full [filter documentation](docs/filter.md) for all available options.
 | Key / Mouse | Action |
 |---|---|
 | Click column header | Sort by that column (click again to reverse, third click to clear) |
-| `F` + `order:name` | Sort by name via filter query |
-| `F` + `order:size:desc` | Sort by size descending via filter query |
+| `/` + `order:name` | Sort by name via query |
+| `/` + `order:size:desc` | Sort by size descending via query |
 
 ### Actions
 

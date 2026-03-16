@@ -86,9 +86,6 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if a.transactionView {
 			return a.onTransactionKeypress(msg)
 		}
-		if a.filtering {
-			return a.onFilterKeypress(msg)
-		}
 		if a.searching {
 			return a.onSearchKeypress(msg)
 		}

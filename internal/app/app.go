@@ -58,13 +58,10 @@ type App struct {
 	detailInfo string
 	detailName string
 
+	// Search state
 	searchInput textinput.Model
 	searching   bool
 	filterQuery string
-
-	filterInput    textinput.Model
-	filtering      bool
-	advancedFilter string
 
 	selected map[string]bool
 
@@ -127,14 +124,9 @@ type App struct {
 
 func New() App {
 	ti := textinput.New()
-	ti.Placeholder = "Search packages..."
-	ti.CharLimit = 100
-	ti.Width = 50
-
-	fi := textinput.New()
-	fi.Placeholder = "section: arch: size>|<|= installed upgradable name: ver: desc:"
-	fi.CharLimit = 200
-	fi.Width = 80
+	ti.Placeholder = "Search or filter: section: arch: size> installed ..."
+	ti.CharLimit = 200
+	ti.Width = 80
 
 	pi := textinput.New()
 	pi.Placeholder = "ppa:user/repository"
@@ -160,7 +152,6 @@ func New() App {
 		pkgIndex:         make(map[string]int),
 		autoremovableSet: make(map[string]bool),
 		searchInput:      ti,
-		filterInput:      fi,
 		ppaInput:         pi,
 		spinner:          s,
 		help:             h,

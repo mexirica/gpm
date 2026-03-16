@@ -71,6 +71,7 @@ type Filter struct {
 	Description  string     // contains (case-insensitive)
 	OrderBy      SortColumn // column to sort by
 	OrderDesc    bool       // true for descending order
+	FreeText     string     // unrecognized tokens joined for fuzzy search
 }
 
 // IsEmpty returns true if no filter criteria are set.
@@ -83,7 +84,8 @@ func (f Filter) IsEmpty() bool {
 		f.Name == "" &&
 		f.Version == "" &&
 		f.Description == "" &&
-		f.OrderBy == SortNone
+		f.OrderBy == SortNone &&
+		f.FreeText == ""
 }
 
 // NeedsMetadata returns true if the filter uses fields (Section, Architecture, Size)
@@ -190,6 +192,7 @@ func (f Filter) matchMetadata(p PackageData) bool {
 // Parse parses a filter query string into a Filter.
 func Parse(query string) Filter {
 	var f Filter
+	var freeTokens []string
 	tokens := tokenize(query)
 	for _, tok := range tokens {
 		tok = strings.TrimSpace(tok)
@@ -263,10 +266,16 @@ func Parse(query string) Filter {
 				if sf := parseSizeExpr(val); sf != nil {
 					f.Size = sf
 				}
+			default:
+				freeTokens = append(freeTokens, tok)
 			}
 			continue
 		}
+
+		// Unrecognized token → free text for fuzzy search
+		freeTokens = append(freeTokens, tok)
 	}
+	f.FreeText = strings.Join(freeTokens, " ")
 	return f
 }
 
@@ -322,6 +331,9 @@ func (f Filter) Describe() string {
 			dir = "desc"
 		}
 		parts = append(parts, "order:"+sortColumnName(f.OrderBy)+":"+dir)
+	}
+	if f.FreeText != "" {
+		parts = append(parts, f.FreeText)
 	}
 	return strings.Join(parts, " ")
 }

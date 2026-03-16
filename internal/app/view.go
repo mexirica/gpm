@@ -7,7 +7,6 @@ import (
 	"github.com/charmbracelet/lipgloss"
 
 	"github.com/mexirica/aptui/internal/fetch"
-	"github.com/mexirica/aptui/internal/filter"
 	"github.com/mexirica/aptui/internal/model"
 	"github.com/mexirica/aptui/internal/ui"
 	"github.com/mexirica/aptui/internal/ui/components"
@@ -64,15 +63,7 @@ func (a App) View() string {
 	if a.searching {
 		footer = append(footer, "  "+a.searchInput.View())
 	} else {
-		footer = append(footer, components.RenderSearchPrompt(a.filterQuery, false))
-	}
-
-	// Advanced filter bar
-	if a.filtering {
-		footer = append(footer, "  "+a.filterInput.View())
-	} else if a.advancedFilter != "" {
-		af := filter.Parse(a.advancedFilter)
-		footer = append(footer, components.RenderFilterPrompt(af.Describe(), false))
+		footer = append(footer, components.RenderQueryPrompt(a.filterQuery, false))
 	}
 
 	sep := lipgloss.NewStyle().Foreground(ui.ColorPrimary).Render(strings.Repeat("─", w))

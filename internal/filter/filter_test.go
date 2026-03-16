@@ -397,3 +397,42 @@ func TestSortNoneDoesNothing(t *testing.T) {
 		t.Errorf("SortNone should not change order: %s, %s, %s", pkgs[0].Name, pkgs[1].Name, pkgs[2].Name)
 	}
 }
+
+func TestParseFreeText(t *testing.T) {
+	f := Parse("vim")
+	if f.FreeText != "vim" {
+		t.Errorf("expected FreeText 'vim', got '%s'", f.FreeText)
+	}
+}
+
+func TestParseFreeTextWithFilter(t *testing.T) {
+	f := Parse("section:utils vim editor")
+	if f.Section != "utils" {
+		t.Errorf("expected section 'utils', got '%s'", f.Section)
+	}
+	if f.FreeText != "vim editor" {
+		t.Errorf("expected FreeText 'vim editor', got '%s'", f.FreeText)
+	}
+}
+
+func TestParseFreeTextEmpty(t *testing.T) {
+	f := Parse("section:utils installed")
+	if f.FreeText != "" {
+		t.Errorf("expected empty FreeText, got '%s'", f.FreeText)
+	}
+}
+
+func TestDescribeIncludesFreeText(t *testing.T) {
+	f := Parse("section:utils vim")
+	desc := f.Describe()
+	if desc != "sec:utils vim" {
+		t.Errorf("expected 'sec:utils vim', got '%s'", desc)
+	}
+}
+
+func TestIsEmptyWithFreeText(t *testing.T) {
+	f := Parse("vim")
+	if f.IsEmpty() {
+		t.Error("filter with free text should not be empty")
+	}
+}

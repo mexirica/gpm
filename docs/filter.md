@@ -1,31 +1,41 @@
-# Advanced Filter
+# Search & Filter
 
-**aptui** includes an advanced filter system that lets you build queries to find exactly the packages you need. You can combine multiple criteria to refine results.
+**aptui** includes a unified search and filter bar that lets you build queries to find exactly the packages you need. You can combine free-text fuzzy search with structured filter criteria in a single input.
 
 <p align="center">
     <img src="../assets/filter.gif" alt="Mirror testing" width="900" />
 </p>
 ---
 
-## Opening the filter
+## Opening the search/filter bar
 
-Press **`Shift+F`** (uppercase F) on the main package screen. An input bar will appear at the bottom of the screen.
+Press **`/`** or **`Shift+F`** on the main package screen. A unified input bar will appear at the bottom of the screen.
 
 ## Controls
 
 | Key       | Action                                        |
 |-----------|-----------------------------------------------|
-| `Shift+F` | Open the filter bar                           |
-| `Enter`   | Apply the filter                              |
-| `Esc`     | Cancel input / clear the active filter        |
+| `/` or `F`| Open the search/filter bar                    |
+| `Enter`   | Apply the query                               |
+| `Esc`     | Cancel input / clear the active query         |
 
-> **Note:** The advanced filter works together with search (`/`) and tabs (All / Installed / Upgradable). All are applied together.
+> **Note:** The search/filter bar works together with tabs (All / Installed / Upgradable). Tabs are applied before the query.
 
 ---
 
+## How it works
+
+Type any combination of **filter tokens** and **free text** in the unified bar:
+
+- **Filter tokens** (like `section:utils`, `installed`, `size>10MB`) are parsed as structured criteria
+- **Free text** (like `vim`, `editor`) is used for fuzzy matching against package names and descriptions
+- Both are applied together: filter tokens narrow the results, then free text fuzzy-searches within them
+
+**Example:** `section:editors vim` → shows packages in the "editors" section whose name or description fuzzy-matches "vim"
+
 ## Syntax
 
-A filter query is composed of **tokens** separated by spaces. All tokens are combined with **AND** (all must be satisfied).
+A query is composed of **tokens** separated by spaces. Filter tokens are combined with **AND** (all must be satisfied). Unrecognized tokens become the fuzzy search query.
 
 ### Field filters (key:value)
 
@@ -211,42 +221,35 @@ Packages whose metadata hasn't been loaded yet (showing "-" for version or size)
 
 ---
 
-## Combining filter with search
+## Combining search and filter
 
-The advanced filter (`Shift+F`) works **together** with text search (`/`). You can:
+Since the search and filter are now unified in a single bar, you can combine them naturally:
 
-1. Apply a filter: `Shift+F` → `section:editors installed` → `Enter`
-2. Then search within the results: `/` → `vim` → `Enter`
+```
+section:editors vim
+```
+→ Packages in the "editors" section, fuzzy-matched against "vim"
 
-The fuzzy search will be applied on top of the packages that already passed the filter.
-
----
-
-## Combining filter with tabs
-
-Tabs (All / Installed / Upgradable, toggled with `Tab`) are applied **before** the filter:
-
-- **All** tab: the filter is applied to all packages
-- **Installed** tab: the filter is applied only to installed packages
-- **Upgradable** tab: the filter is applied only to upgradable packages
+```
+installed size>10MB python
+```
+→ Installed packages larger than 10 MB, fuzzy-matched against "python"
 
 ---
 
-## Metadata loading
+## Combining with tabs
 
-When you use filters that depend on package metadata (`section:`, `arch:`, `size>`), aptui needs to load additional information via `apt-cache show`. To optimize performance:
+Tabs (All / Installed / Upgradable, toggled with `Tab`) are applied **before** the query:
 
-- First, filters that **don't require** metadata (name, version, installed, etc.) are applied to narrow down candidates
-- Then, metadata is loaded **only** for the remaining candidates
-- While metadata is loading, the status bar shows `(loading metadata...)`
-- When metadata arrives, the filter is automatically re-applied and more results may appear
+- **All** tab: the query is applied to all packages
+- **Installed** tab: the query is applied only to installed packages
+- **Upgradable** tab: the query is applied only to upgradable packages
 
 ---
 
-## Clearing the filter
+## Clearing the query
 
-- Press **`Esc`** on the main screen to clear the active filter
-- If both an advanced filter **and** a search are active, the first `Esc` clears the advanced filter and the second clears the search
-- Press **`Ctrl+R`** to reload all packages (also clears all filters)
+- Press **`Esc`** on the main screen to clear the active query
+- Press **`Ctrl+R`** to reload all packages (also clears the query)
 
 ---

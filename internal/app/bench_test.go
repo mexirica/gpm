@@ -82,7 +82,7 @@ func BenchmarkApplyFilterNoFilter(b *testing.B) {
 // BenchmarkApplyFilterName benchmarks a non-metadata filter (name contains).
 func BenchmarkApplyFilterName(b *testing.B) {
 	a := buildBenchApp(b)
-	a.advancedFilter = "name:vim"
+	a.filterQuery = "name:vim"
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		a.applyFilter()
@@ -93,7 +93,7 @@ func BenchmarkApplyFilterName(b *testing.B) {
 // This is the filter type that was slow before (required apt-cache show).
 func BenchmarkApplyFilterSection(b *testing.B) {
 	a := buildBenchApp(b)
-	a.advancedFilter = "section:utils"
+	a.filterQuery = "section:utils"
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		a.applyFilter()
@@ -103,7 +103,7 @@ func BenchmarkApplyFilterSection(b *testing.B) {
 // BenchmarkApplyFilterArch benchmarks architecture filter.
 func BenchmarkApplyFilterArch(b *testing.B) {
 	a := buildBenchApp(b)
-	a.advancedFilter = "arch:amd64"
+	a.filterQuery = "arch:amd64"
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		a.applyFilter()
@@ -113,7 +113,7 @@ func BenchmarkApplyFilterArch(b *testing.B) {
 // BenchmarkApplyFilterSize benchmarks size comparison filter.
 func BenchmarkApplyFilterSize(b *testing.B) {
 	a := buildBenchApp(b)
-	a.advancedFilter = "size>10MB"
+	a.filterQuery = "size>10MB"
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		a.applyFilter()
@@ -123,7 +123,7 @@ func BenchmarkApplyFilterSize(b *testing.B) {
 // BenchmarkApplyFilterCombined benchmarks a combined metadata + non-metadata filter.
 func BenchmarkApplyFilterCombined(b *testing.B) {
 	a := buildBenchApp(b)
-	a.advancedFilter = "section:utils arch:amd64 size>1MB"
+	a.filterQuery = "section:utils arch:amd64 size>1MB"
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		a.applyFilter()
@@ -133,7 +133,7 @@ func BenchmarkApplyFilterCombined(b *testing.B) {
 // BenchmarkApplyFilterInstalled benchmarks filtering installed packages.
 func BenchmarkApplyFilterInstalled(b *testing.B) {
 	a := buildBenchApp(b)
-	a.advancedFilter = "installed"
+	a.filterQuery = "installed"
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		a.applyFilter()
@@ -143,7 +143,7 @@ func BenchmarkApplyFilterInstalled(b *testing.B) {
 // BenchmarkApplyFilterSortBySize benchmarks filter + sorting by size.
 func BenchmarkApplyFilterSortBySize(b *testing.B) {
 	a := buildBenchApp(b)
-	a.advancedFilter = "installed order:size:desc"
+	a.filterQuery = "installed order:size:desc"
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		a.applyFilter()
@@ -164,16 +164,15 @@ func BenchmarkFilterParse(b *testing.B) {
 	}
 }
 
-// BenchmarkSubmitFilterSection simulates the full submit filter path
-// for a metadata filter. Before: this would trigger loadFilterCandidateInfo
-// + BatchGetInfo + async wait. Now: it's a synchronous applyFilter call.
-func BenchmarkSubmitFilterSection(b *testing.B) {
+// BenchmarkSubmitSearchSection simulates the full submit search path
+// for a metadata filter. Now uses the unified search/filter bar.
+func BenchmarkSubmitSearchSection(b *testing.B) {
 	a := buildBenchApp(b)
-	a.filterInput.SetValue("section:utils")
+	a.searchInput.SetValue("section:utils")
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		a.advancedFilter = ""
-		a.filterInput.SetValue("section:utils")
-		a.submitFilter()
+		a.filterQuery = ""
+		a.searchInput.SetValue("section:utils")
+		a.submitSearch()
 	}
 }

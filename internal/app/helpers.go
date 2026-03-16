@@ -83,8 +83,12 @@ func (a *App) applyFilter() {
 		source = a.allPackages
 	}
 
-	af := filter.Parse(a.advancedFilter)
-	if !af.IsEmpty() {
+	af := filter.Parse(a.filterQuery)
+
+	// Apply structured filter criteria (section:, arch:, size>, etc.)
+	if af.Section != "" || af.Architecture != "" || af.Size != nil ||
+		af.Installed != nil || af.Upgradable != nil ||
+		af.Name != "" || af.Version != "" || af.Description != "" {
 		var filtered []model.Package
 		for _, p := range source {
 			pd := filter.PackageData{
@@ -105,14 +109,16 @@ func (a *App) applyFilter() {
 		source = filtered
 	}
 
-	if a.filterQuery == "" {
+	// Apply fuzzy search on free text (unrecognized tokens)
+	freeText := af.FreeText
+	if freeText == "" {
 		a.filtered = source
 	} else {
-		minScore := fuzzy.MinQuality(len(a.filterQuery))
+		minScore := fuzzy.MinQuality(len(freeText))
 		var scored []scoredPackage
 		for _, p := range source {
-			nameRes := fuzzy.Score(a.filterQuery, p.Name)
-			descRes := fuzzy.Score(a.filterQuery, p.Description)
+			nameRes := fuzzy.Score(freeText, p.Name)
+			descRes := fuzzy.Score(freeText, p.Description)
 
 			s := 0
 			matched := false
@@ -191,7 +197,7 @@ func (a App) effectiveSortInfo() filter.SortInfo {
 	if a.sortColumn != filter.SortNone {
 		return filter.SortInfo{Column: a.sortColumn, Desc: a.sortDesc}
 	}
-	af := filter.Parse(a.advancedFilter)
+	af := filter.Parse(a.filterQuery)
 	return filter.SortInfo{Column: af.OrderBy, Desc: af.OrderDesc}
 }
 
@@ -310,10 +316,6 @@ func (a *App) adjustTransactionScroll() {
 // searchBarY returns the Y coordinate of the search bar row.
 func (a App) searchBarY() int {
 	helpLines := strings.Count(a.help.View(a.keys), "\n") + 1
-	filterLines := 0
-	if a.filtering || a.advancedFilter != "" {
-		filterLines = 1
-	}
 	if !a.loading && len(a.filtered) > 0 {
 		detailLines := a.packageDetailHeight()
 		if a.detailName == "" || a.detailInfo == "" {
@@ -324,9 +326,9 @@ func (a App) searchBarY() int {
 			pkg := a.filtered[idx]
 			detailLines = strings.Count(a.renderBasicDetail(pkg), "\n")
 		}
-		return a.height - 4 - filterLines - detailLines - helpLines
+		return a.height - 4 - detailLines - helpLines
 	}
-	return a.height - 3 - filterLines - helpLines
+	return a.height - 3 - helpLines
 }
 
 func (a App) packageListHeight() int {
