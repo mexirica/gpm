@@ -19,22 +19,21 @@ func purgeBatchCmd(names []string) tea.Cmd {
 }
 
 func reloadAllPackages() tea.Msg {
-	type namesResult struct {
-		names []string
-		err   error
+	type bulkResult struct {
+		info map[string]apt.PackageInfo
 	}
 	type pkgResult struct {
 		pkgs []model.Package
 		err  error
 	}
 
-	namesCh := make(chan namesResult, 1)
+	bulkCh := make(chan bulkResult, 1)
 	installedCh := make(chan pkgResult, 1)
 	upgradableCh := make(chan pkgResult, 1)
 
 	go func() {
-		n, err := apt.ListAllNames()
-		namesCh <- namesResult{n, err}
+		info := apt.LoadAllAvailableInfo()
+		bulkCh <- bulkResult{info}
 	}()
 	go func() {
 		p, err := apt.ListInstalled()
@@ -45,18 +44,14 @@ func reloadAllPackages() tea.Msg {
 		upgradableCh <- pkgResult{p, err}
 	}()
 
-	nr := <-namesCh
+	br := <-bulkCh
 	ir := <-installedCh
 	ur := <-upgradableCh
 
-	var allNames []string
-	if nr.err == nil {
-		allNames = nr.names
-	}
 	if ir.err != nil {
 		return allPackagesMsg{nil, nil, nil, ir.err}
 	}
-	return allPackagesMsg{allNames, ir.pkgs, ur.pkgs, nil}
+	return allPackagesMsg{br.info, ir.pkgs, ur.pkgs, nil}
 }
 
 func aptUpdateCmd() tea.Cmd {

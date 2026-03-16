@@ -36,7 +36,7 @@ func (a App) submitSearch() (tea.Model, tea.Cmd) {
 		return a, searchPackagesCmd(query)
 	}
 	a.status = fmt.Sprintf("%d packages matching '%s'", len(a.filtered), query)
-	return a, tea.Batch(showPackageDetailCmd(a.filtered[0].Name), a.preloadVisiblePackageInfo())
+	return a, showPackageDetailCmd(a.filtered[0].Name)
 }
 
 func (a App) cancelSearch() (tea.Model, tea.Cmd) {
@@ -58,5 +58,5 @@ func (a App) updateSearchFilter(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if len(a.filtered) > 0 {
 		detailCmd = showPackageDetailCmd(a.filtered[0].Name)
 	}
-	return a, tea.Batch(cmd, detailCmd, a.preloadVisiblePackageInfo())
+	return a, tea.Batch(cmd, detailCmd)
 }

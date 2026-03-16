@@ -83,7 +83,6 @@ func (a App) clearFilterOrSearch() (tea.Model, tea.Cmd) {
 		if len(a.filtered) > 0 {
 			cmds = append(cmds, showPackageDetailCmd(a.filtered[0].Name))
 		}
-		cmds = append(cmds, a.preloadVisiblePackageInfo())
 		return a, tea.Batch(cmds...)
 	}
 	// Then clear search
@@ -99,7 +98,6 @@ func (a App) clearFilterOrSearch() (tea.Model, tea.Cmd) {
 	if len(a.filtered) > 0 {
 		cmds = append(cmds, showPackageDetailCmd(a.filtered[0].Name))
 	}
-	cmds = append(cmds, a.preloadVisiblePackageInfo())
 	return a, tea.Batch(cmds...)
 }
 

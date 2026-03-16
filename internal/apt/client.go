@@ -1,14 +1,97 @@
 package apt
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"github.com/mexirica/aptui/internal/model"
 )
+
+// LoadAllAvailableInfo parses /var/lib/apt/lists/*_Packages files to bulk-load
+// metadata for all available packages. This is much faster than spawning
+// apt-cache show processes because it's pure file I/O with no process overhead.
+func LoadAllAvailableInfo() map[string]PackageInfo {
+	files, err := filepath.Glob("/var/lib/apt/lists/*_Packages")
+	if err != nil || len(files) == 0 {
+		return nil
+	}
+
+	info := make(map[string]PackageInfo, 100000)
+
+	for _, f := range files {
+		parsePackageFile(f, info)
+	}
+
+	return info
+}
+
+// parsePackageFile parses a single *_Packages file and merges entries into info.
+// Later files overwrite earlier ones; note that filepath.Glob returns files in
+// lexicographic order, which may not exactly match apt pin priorities —
+// this is a known simplification that works for typical setups.
+func parsePackageFile(path string, info map[string]PackageInfo) {
+	file, err := os.Open(path)
+	if err != nil {
+		return
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
+
+	var curPkg, curVer, curSize, curSection, curArch string
+
+	flush := func() {
+		if curPkg != "" {
+			info[curPkg] = PackageInfo{
+				Version:      curVer,
+				Size:         formatSize(curSize),
+				Section:      curSection,
+				Architecture: curArch,
+			}
+		}
+		curPkg, curVer, curSize, curSection, curArch = "", "", "", "", ""
+	}
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		if len(line) == 0 {
+			flush()
+			continue
+		}
+		switch line[0] {
+		case 'P':
+			if strings.HasPrefix(line, "Package: ") {
+				curPkg = line[9:]
+			}
+		case 'V':
+			if strings.HasPrefix(line, "Version: ") {
+				curVer = line[9:]
+			}
+		case 'I':
+			if strings.HasPrefix(line, "Installed-Size: ") {
+				curSize = line[16:]
+			}
+		case 'S':
+			if strings.HasPrefix(line, "Section: ") {
+				curSection = line[9:]
+			}
+		case 'A':
+			if strings.HasPrefix(line, "Architecture: ") {
+				curArch = line[14:]
+			}
+		}
+	}
+	flush()
+	// Ignore scanner errors (e.g. token too long); entries parsed so far
+	// are still usable, and the background reload will recover.
+	_ = scanner.Err()
+}
 
 func SilentUpdate() error {
 	cmd := exec.Command("sudo", "-n", "apt-get", "update", "-qq")
@@ -428,111 +511,6 @@ type PackageInfo struct {
 	Size         string
 	Section      string
 	Architecture string
-}
-
-func BatchGetInfo(names []string) map[string]PackageInfo {
-	if len(names) == 0 {
-		return nil
-	}
-
-	const chunkSize = 50
-	const maxWorkers = 8
-
-	type result struct {
-		info map[string]PackageInfo
-	}
-
-	chunks := make([][]string, 0, len(names)/chunkSize+1)
-	for i := 0; i < len(names); i += chunkSize {
-		end := i + chunkSize
-		if end > len(names) {
-			end = len(names)
-		}
-		chunks = append(chunks, names[i:end])
-	}
-
-	results := make(chan result, len(chunks))
-	sem := make(chan struct{}, maxWorkers)
-
-	for _, chunk := range chunks {
-		sem <- struct{}{}
-		go func(pkgs []string) {
-			defer func() { <-sem }()
-			v := getShowInfo(pkgs)
-			results <- result{info: v}
-		}(chunk)
-	}
-
-	merged := make(map[string]PackageInfo, len(names))
-	for range chunks {
-		r := <-results
-		for k, v := range r.info {
-			merged[k] = v
-		}
-	}
-
-	return merged
-}
-
-// getShowInfo runs 'apt-cache show pkg1 pkg2 ...' and
-// parses Package, Version, and Installed-Size for each entry.
-// Only the first entry per package is kept (the candidate version).
-func getShowInfo(names []string) map[string]PackageInfo {
-	args := append([]string{"show"}, names...)
-	cmd := exec.Command("apt-cache", args...)
-	var out bytes.Buffer
-	cmd.Stdout = &out
-	cmd.Stderr = &bytes.Buffer{}
-	// Ignore error: apt-cache show returns non-zero if any package is
-	// not found, but still outputs data for the ones that exist.
-	_ = cmd.Run()
-
-	info := make(map[string]PackageInfo, len(names))
-	var curPkg string
-	var curVer string
-	var curSize string
-	var curSection string
-	var curArch string
-
-	flush := func() {
-		if curPkg != "" {
-			// Keep only the first entry per package (candidate version)
-			if _, exists := info[curPkg]; !exists {
-				info[curPkg] = PackageInfo{
-					Version:      curVer,
-					Size:         formatSize(curSize),
-					Section:      curSection,
-					Architecture: curArch,
-				}
-			}
-		}
-		curPkg = ""
-		curVer = ""
-		curSize = ""
-		curSection = ""
-		curArch = ""
-	}
-
-	for _, line := range strings.Split(out.String(), "\n") {
-		if line == "" {
-			flush()
-			continue
-		}
-		if strings.HasPrefix(line, "Package: ") {
-			curPkg = strings.TrimPrefix(line, "Package: ")
-		} else if strings.HasPrefix(line, "Version: ") {
-			curVer = strings.TrimPrefix(line, "Version: ")
-		} else if strings.HasPrefix(line, "Installed-Size: ") {
-			curSize = strings.TrimPrefix(line, "Installed-Size: ")
-		} else if strings.HasPrefix(line, "Section: ") {
-			curSection = strings.TrimPrefix(line, "Section: ")
-		} else if strings.HasPrefix(line, "Architecture: ") {
-			curArch = strings.TrimPrefix(line, "Architecture: ")
-		}
-	}
-	flush() // last entry
-
-	return info
 }
 
 // ParseShowEntry parses a single apt-cache show output and returns PackageInfo.

@@ -94,7 +94,6 @@ func parseSearchOutput(output string) []model.Package {
 		if len(parts) == 2 {
 			pkg.Description = strings.TrimSpace(parts[1])
 		}
-		pkg.Installed = IsInstalled(pkg.Name)
 		if pkg.Name != "" && !seen[pkg.Name] {
 			packages = append(packages, pkg)
 			seen[pkg.Name] = true
