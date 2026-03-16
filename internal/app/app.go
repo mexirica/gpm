@@ -106,9 +106,8 @@ type App struct {
 	autoremovable    []string
 	autoremovableSet map[string]bool
 
-	allNamesLoaded    bool
-	loadingFilterMeta bool
-	installedCount    int
+	allNamesLoaded bool
+	installedCount int
 
 	errlogStore  *errlog.Store
 	errlogItems  []errlog.Entry
@@ -174,5 +173,5 @@ func New() App {
 }
 
 func (a App) Init() tea.Cmd {
-	return tea.Batch(a.spinner.Tick, reloadAllPackages, loadAutoremovableCmd(), bulkLoadInfoCmd)
+	return tea.Batch(a.spinner.Tick, reloadAllPackages, loadAutoremovableCmd())
 }

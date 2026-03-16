@@ -10,7 +10,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/mexirica/aptui/internal/apt"
 	"github.com/mexirica/aptui/internal/filter"
 	"github.com/mexirica/aptui/internal/fuzzy"
 	"github.com/mexirica/aptui/internal/model"
@@ -214,88 +213,10 @@ func sortFieldEmpty(p model.Package, col filter.SortColumn) bool {
 	}
 }
 
-// loadFilterCandidateInfo fetches metadata only for packages that pass all
-// non-metadata filters but are missing metadata needed by the active filter.
-// This is much faster than loading ALL packages since non-metadata filters
-// (name, version, installed, etc.) narrow the set first.
-func (a *App) loadFilterCandidateInfo() tea.Cmd {
-	af := filter.Parse(a.advancedFilter)
-	if !af.NeedsMetadata() {
-		return nil
-	}
-
-	var names []string
-	for i, p := range a.allPackages {
-		// If metadata is missing, try to fill from cache
-		if p.Section == "" || p.Architecture == "" || p.Size == "" || p.Size == "-" {
-			if info, ok := a.infoCache[p.Name]; ok {
-				if a.allPackages[i].Section == "" {
-					a.allPackages[i].Section = info.Section
-				}
-				if a.allPackages[i].Architecture == "" {
-					a.allPackages[i].Architecture = info.Architecture
-				}
-				if a.allPackages[i].Size == "" || a.allPackages[i].Size == "-" {
-					a.allPackages[i].Size = info.Size
-				}
-				continue
-			}
-		} else {
-			continue // already has metadata
-		}
-		// Only load metadata for packages that pass the non-metadata filters
-		pd := filter.PackageData{
-			Name:        p.Name,
-			Version:     p.Version,
-			NewVersion:  p.NewVersion,
-			Description: p.Description,
-			Installed:   p.Installed,
-			Upgradable:  p.Upgradable,
-		}
-		if af.MatchWithoutMetadata(pd) {
-			names = append(names, p.Name)
-		}
-	}
-	if len(names) == 0 {
-		return nil
-	}
-	return func() tea.Msg {
-		info := apt.BatchGetInfo(names)
-		return infoLoadedMsg{info: info}
-	}
-}
-
-// preloadVisiblePackageInfo fetches version/size info for packages near the visible
-// viewport (±20/+50 rows) that aren't already cached.
+// preloadVisiblePackageInfo is a no-op since all metadata is loaded at startup
+// via LoadAllAvailableInfo. Kept as a method to avoid changing all callers.
 func (a *App) preloadVisiblePackageInfo() tea.Cmd {
-	if len(a.filtered) == 0 {
-		return nil
-	}
-	h := a.packageListHeight()
-	start := a.scrollOffset
-	end := start + h + 50
-	if start > 20 {
-		start -= 20
-	} else {
-		start = 0
-	}
-	if end > len(a.filtered) {
-		end = len(a.filtered)
-	}
-	var names []string
-	for i := start; i < end; i++ {
-		name := a.filtered[i].Name
-		if _, ok := a.infoCache[name]; !ok {
-			names = append(names, name)
-		}
-	}
-	if len(names) == 0 {
-		return nil
-	}
-	return func() tea.Msg {
-		info := apt.BatchGetInfo(names)
-		return infoLoadedMsg{info: info}
-	}
+	return nil
 }
 
 // rebuildIndex rebuilds the package name to index mapping for O(1) lookups.

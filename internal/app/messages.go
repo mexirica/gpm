@@ -7,14 +7,10 @@ import (
 )
 
 type allPackagesMsg struct {
-	allNames   []string
+	bulkInfo   map[string]apt.PackageInfo
 	installed  []model.Package
 	upgradable []model.Package
 	err        error
-}
-
-type infoLoadedMsg struct {
-	info map[string]apt.PackageInfo
 }
 
 type searchResultMsg struct {
@@ -50,10 +46,6 @@ type fetchApplyMsg struct {
 }
 
 type clearStatusMsg struct{}
-
-type bulkInfoMsg struct {
-	info map[string]apt.PackageInfo
-}
 
 type silentUpdateDoneMsg struct {
 	names      []string

@@ -31,14 +31,8 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case allPackagesMsg:
 		return a.onAllPackagesLoaded(msg)
 
-	case bulkInfoMsg:
-		return a.onBulkInfoLoaded(msg)
-
 	case silentUpdateDoneMsg:
 		return a.onSilentUpdateDone(msg)
-
-	case infoLoadedMsg:
-		return a.onPackageInfoLoaded(msg)
 
 	case searchResultMsg:
 		return a.onSearchResultLoaded(msg)
@@ -115,24 +109,43 @@ func (a App) onAllPackagesLoaded(msg allPackagesMsg) (tea.Model, tea.Cmd) {
 	for _, p := range msg.upgradable {
 		a.upgradableMap[p.Name] = p
 	}
-	seen := make(map[string]bool, len(msg.installed)+len(msg.allNames))
-	var all []model.Package
+	// Populate infoCache from bulk-loaded data
+	a.infoCache = make(map[string]apt.PackageInfo, len(msg.bulkInfo))
+	for name, info := range msg.bulkInfo {
+		a.infoCache[name] = info
+	}
+
+	seen := make(map[string]bool, len(msg.installed)+len(msg.bulkInfo))
+	all := make([]model.Package, 0, len(msg.installed)+len(msg.bulkInfo))
 	for _, p := range msg.installed {
 		if up, ok := a.upgradableMap[p.Name]; ok {
 			p.Upgradable = true
 			p.NewVersion = up.NewVersion
 		}
+		// Enrich installed packages with bulk info if fields are missing
+		if info, ok := msg.bulkInfo[p.Name]; ok {
+			if p.Size == "" || p.Size == "-" {
+				p.Size = info.Size
+			}
+			if p.Section == "" {
+				p.Section = info.Section
+			}
+			if p.Architecture == "" {
+				p.Architecture = info.Architecture
+			}
+		}
 		all = append(all, p)
 		seen[p.Name] = true
 	}
-	for _, name := range msg.allNames {
+	for name, info := range msg.bulkInfo {
 		if !seen[name] {
-			pkg := model.Package{Name: name, Installed: false}
-			if info, ok := a.infoCache[name]; ok {
-				pkg.NewVersion = info.Version
-				pkg.Size = info.Size
-				pkg.Section = info.Section
-				pkg.Architecture = info.Architecture
+			pkg := model.Package{
+				Name:         name,
+				Installed:    false,
+				NewVersion:   info.Version,
+				Size:         info.Size,
+				Section:      info.Section,
+				Architecture: info.Architecture,
 			}
 			all = append(all, pkg)
 			seen[name] = true
@@ -156,53 +169,28 @@ func (a App) onAllPackagesLoaded(msg allPackagesMsg) (tea.Model, tea.Cmd) {
 	if len(a.filtered) > 0 {
 		cmds = append(cmds, showPackageDetailCmd(a.filtered[0].Name))
 	}
-	cmds = append(cmds, a.preloadVisiblePackageInfo())
 	if firstLoad {
 		cmds = append(cmds, silentUpdateCmd())
 	}
 	return a, tea.Batch(cmds...)
 }
 
-func (a App) onBulkInfoLoaded(msg bulkInfoMsg) (tea.Model, tea.Cmd) {
-	if len(msg.info) == 0 {
-		return a, nil
-	}
-	// Merge into infoCache (don't overwrite existing entries)
-	for name, info := range msg.info {
-		if _, ok := a.infoCache[name]; !ok {
-			a.infoCache[name] = info
-		}
-	}
-	// Merge into allPackages for packages missing metadata
-	for name, info := range msg.info {
-		if idx, ok := a.pkgIndex[name]; ok {
-			p := &a.allPackages[idx]
-			if p.Version == "" && p.NewVersion == "" {
-				p.NewVersion = info.Version
-			}
-			if p.Size == "" {
-				p.Size = info.Size
-			}
-			if p.Section == "" {
-				p.Section = info.Section
-			}
-			if p.Architecture == "" {
-				p.Architecture = info.Architecture
-			}
-		}
-	}
-	return a, nil
-}
-
 func (a App) onSilentUpdateDone(msg silentUpdateDoneMsg) (tea.Model, tea.Cmd) {
 	changed := false
 
-	// Merge new package names
+	// Merge new package names (re-parse the package lists for new packages)
 	if len(msg.names) > 0 {
 		for _, name := range msg.names {
 			if _, ok := a.pkgIndex[name]; !ok {
+				pkg := model.Package{Name: name}
+				if info, ok := a.infoCache[name]; ok {
+					pkg.NewVersion = info.Version
+					pkg.Size = info.Size
+					pkg.Section = info.Section
+					pkg.Architecture = info.Architecture
+				}
 				a.pkgIndex[name] = len(a.allPackages)
-				a.allPackages = append(a.allPackages, model.Package{Name: name})
+				a.allPackages = append(a.allPackages, pkg)
 				changed = true
 			}
 		}
@@ -252,75 +240,6 @@ func (a App) onSilentUpdateDone(msg silentUpdateDoneMsg) (tea.Model, tea.Cmd) {
 	} else {
 		a.pendingStatus = defaultStatus
 	}
-	return a, a.preloadVisiblePackageInfo()
-}
-
-func (a App) onPackageInfoLoaded(msg infoLoadedMsg) (tea.Model, tea.Cmd) {
-	for name, info := range msg.info {
-		a.infoCache[name] = info
-	}
-	for name, info := range msg.info {
-		if idx, ok := a.pkgIndex[name]; ok {
-			if a.allPackages[idx].Version == "" {
-				a.allPackages[idx].NewVersion = info.Version
-			}
-			if a.allPackages[idx].Size == "" {
-				a.allPackages[idx].Size = info.Size
-			}
-			if a.allPackages[idx].Section == "" {
-				a.allPackages[idx].Section = info.Section
-			}
-			if a.allPackages[idx].Architecture == "" {
-				a.allPackages[idx].Architecture = info.Architecture
-			}
-		}
-	}
-
-	// If an advanced filter is active, re-apply it now that metadata has arrived.
-	if a.advancedFilter != "" {
-		wasLoadingMeta := a.loadingFilterMeta
-		a.loadingFilterMeta = false
-		if wasLoadingMeta {
-			a.loading = false
-		}
-		prevIdx := a.selectedIdx
-		prevOffset := a.scrollOffset
-		a.applyFilter()
-		if !wasLoadingMeta {
-			a.selectedIdx = prevIdx
-			a.scrollOffset = prevOffset
-		}
-		if a.selectedIdx >= len(a.filtered) {
-			a.selectedIdx = len(a.filtered) - 1
-			if a.selectedIdx < 0 {
-				a.selectedIdx = 0
-			}
-		}
-		a.status = fmt.Sprintf("%d packages matching filter", len(a.filtered))
-		var cmds []tea.Cmd
-		if wasLoadingMeta && len(a.filtered) > 0 {
-			cmds = append(cmds, showPackageDetailCmd(a.filtered[0].Name))
-			cmds = append(cmds, a.preloadVisiblePackageInfo())
-		}
-		return a, tea.Batch(cmds...)
-	}
-
-	for i := range a.filtered {
-		if info, ok := msg.info[a.filtered[i].Name]; ok {
-			if a.filtered[i].Version == "" {
-				a.filtered[i].NewVersion = info.Version
-			}
-			if a.filtered[i].Size == "" {
-				a.filtered[i].Size = info.Size
-			}
-			if a.filtered[i].Section == "" {
-				a.filtered[i].Section = info.Section
-			}
-			if a.filtered[i].Architecture == "" {
-				a.filtered[i].Architecture = info.Architecture
-			}
-		}
-	}
 	return a, nil
 }
 
@@ -355,7 +274,7 @@ func (a App) onSearchResultLoaded(msg searchResultMsg) (tea.Model, tea.Cmd) {
 	a.scrollOffset = 0
 	a.status = fmt.Sprintf("%d results for '%s'", len(msg.pkgs), a.filterQuery)
 	if len(a.filtered) > 0 {
-		return a, tea.Batch(showPackageDetailCmd(a.filtered[0].Name), a.preloadVisiblePackageInfo())
+		return a, showPackageDetailCmd(a.filtered[0].Name)
 	}
 	a.detailInfo = ""
 	a.detailName = ""

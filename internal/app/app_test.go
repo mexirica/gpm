@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/mexirica/aptui/internal/apt"
 	"github.com/mexirica/aptui/internal/model"
 	"github.com/mexirica/aptui/internal/ui"
 )
@@ -407,7 +408,12 @@ func TestAllPackagesMsg(t *testing.T) {
 	a := newTestApp()
 
 	msg := allPackagesMsg{
-		allNames:   []string{"vim", "git", "curl", "htop"},
+		bulkInfo: map[string]apt.PackageInfo{
+			"vim":  {Version: "8.2", Section: "editors", Architecture: "amd64"},
+			"git":  {Version: "2.40", Section: "vcs", Architecture: "amd64"},
+			"curl": {Version: "7.88", Section: "web", Architecture: "amd64"},
+			"htop": {Version: "3.2", Section: "utils", Architecture: "amd64"},
+		},
 		installed:  []model.Package{{Name: "vim", Installed: true, Version: "8.2"}},
 		upgradable: []model.Package{{Name: "vim", Installed: true, Upgradable: true, NewVersion: "9.0"}},
 		err:        nil,
