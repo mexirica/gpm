@@ -120,8 +120,13 @@ func parseUpgradableOutput(output string) []model.Package {
 			Installed:  true,
 			Upgradable: true,
 		}
-		if len(nameParts) == 2 && strings.Contains(nameParts[1], "security") {
-			pkg.SecurityUpdate = true
+		if len(nameParts) == 2 {
+			for _, repo := range strings.Split(nameParts[1], ",") {
+				if strings.HasSuffix(repo, "-security") {
+					pkg.SecurityUpdate = true
+					break
+				}
+			}
 		}
 		if len(parts) >= 2 {
 			pkg.NewVersion = parts[1]

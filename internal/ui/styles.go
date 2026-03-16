@@ -60,11 +60,6 @@ var (
 			Bold(true).
 			SetString("↑")
 
-	SecurityBadge = lipgloss.NewStyle().
-			Foreground(ColorDanger).
-			Bold(true).
-			SetString("⚠")
-
 	PackageNameStyle = lipgloss.NewStyle().
 				Bold(true).
 				Foreground(ColorWhite)
