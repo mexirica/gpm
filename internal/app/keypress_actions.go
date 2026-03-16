@@ -324,9 +324,11 @@ func (a App) holdSelectedPackages() (tea.Model, tea.Cmd) {
 	a.loading = true
 	a.selected = make(map[string]bool)
 	if len(holdNames) > 0 && len(unholdNames) > 0 {
+		a.holdPending = 2
 		a.status = fmt.Sprintf("Toggling hold on %d packages...", len(holdNames)+len(unholdNames))
 		return a, tea.Batch(holdBatchCmd(holdNames), unholdBatchCmd(unholdNames))
 	}
+	a.holdPending = 1
 	if len(holdNames) > 0 {
 		a.status = fmt.Sprintf("Holding %d packages...", len(holdNames))
 		return a, holdBatchCmd(holdNames)

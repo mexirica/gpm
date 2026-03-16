@@ -104,7 +104,9 @@ type App struct {
 	autoremovable    []string
 	autoremovableSet map[string]bool
 
-	heldSet map[string]bool
+	heldSet     map[string]bool
+	holdPending int
+	holdFailed  bool
 
 	allNamesLoaded bool
 	installedCount int

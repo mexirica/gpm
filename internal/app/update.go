@@ -499,11 +499,20 @@ func (a App) onHeldListLoaded(msg holdListMsg) (tea.Model, tea.Cmd) {
 }
 
 func (a App) onHoldFinished(msg holdFinishedMsg) (tea.Model, tea.Cmd) {
-	a.loading = false
 	if msg.err != nil {
 		a.errlogStore.Log("hold", msg.err.Error())
-		a.status = ui.ErrorStyle.Render(fmt.Sprintf("Error: %v", msg.err))
-		return a, clearStatusAfter(2 * time.Second)
+		a.holdFailed = true
+	}
+	a.holdPending--
+	if a.holdPending > 0 {
+		return a, nil
+	}
+	a.loading = false
+	failed := a.holdFailed
+	a.holdFailed = false
+	if failed {
+		a.status = ui.ErrorStyle.Render("Error: hold/unhold failed")
+		return a, tea.Batch(loadHeldCmd(), clearStatusAfter(2*time.Second))
 	}
 	a.status = ui.SuccessStyle.Render(fmt.Sprintf("✔ %s completed!", msg.op))
 	a.statusLock = time.Now()
