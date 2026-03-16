@@ -584,6 +584,46 @@ func TestOptimisticUpdateSkippedOnFailure(t *testing.T) {
 	}
 }
 
+func TestOptimisticUpdateCleanupAll(t *testing.T) {
+	a := newTestApp()
+	a.allPackages = []model.Package{
+		{Name: "vim", Installed: true, NewVersion: "9.0", Upgradable: true},
+		{Name: "git", Installed: true},
+		{Name: "curl", Installed: false},
+	}
+	a.rebuildIndex()
+	a.installedCount = 2
+	a.upgradableMap = map[string]model.Package{
+		"vim": {Name: "vim", NewVersion: "9.0"},
+	}
+	a.autoremovable = []string{"vim", "git"}
+	a.autoremovableSet = map[string]bool{"vim": true, "git": true}
+
+	a.applyOptimisticUpdate("cleanup-all", []string{"vim", "git"})
+
+	if a.allPackages[0].Installed {
+		t.Error("vim should not be installed after cleanup-all")
+	}
+	if a.allPackages[1].Installed {
+		t.Error("git should not be installed after cleanup-all")
+	}
+	if a.allPackages[0].NewVersion != "" {
+		t.Errorf("vim NewVersion should be cleared, got %q", a.allPackages[0].NewVersion)
+	}
+	if a.allPackages[0].Upgradable {
+		t.Error("vim should not be upgradable after cleanup-all")
+	}
+	if a.installedCount != 0 {
+		t.Errorf("expected installedCount=0, got %d", a.installedCount)
+	}
+	if a.autoremovable != nil {
+		t.Error("autoremovable should be nil after cleanup-all")
+	}
+	if len(a.autoremovableSet) != 0 {
+		t.Errorf("autoremovableSet should be empty, got %d", len(a.autoremovableSet))
+	}
+}
+
 func TestRebuildIndex(t *testing.T) {
 	a := newTestApp()
 	a.allPackages = []model.Package{

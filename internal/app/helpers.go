@@ -52,7 +52,6 @@ func (a *App) activateTab() tea.Cmd {
 	if len(a.filtered) > 0 {
 		cmds = append(cmds, showPackageDetailCmd(a.filtered[0].Name))
 	}
-	cmds = append(cmds, a.preloadVisiblePackageInfo())
 	a.status = fmt.Sprintf("%d packages (%s) ", len(a.filtered), tabDefs[a.activeTab].name)
 	return tea.Batch(cmds...)
 }
@@ -213,12 +212,6 @@ func sortFieldEmpty(p model.Package, col filter.SortColumn) bool {
 	}
 }
 
-// preloadVisiblePackageInfo is a no-op since all metadata is loaded at startup
-// via LoadAllAvailableInfo. Kept as a method to avoid changing all callers.
-func (a *App) preloadVisiblePackageInfo() tea.Cmd {
-	return nil
-}
-
 // rebuildIndex rebuilds the package name to index mapping for O(1) lookups.
 func (a *App) rebuildIndex() {
 	a.pkgIndex = make(map[string]int, len(a.allPackages))
@@ -274,6 +267,7 @@ func (a *App) applyOptimisticUpdate(op string, pkgs []string) {
 				}
 				a.allPackages[idx].Installed = false
 				a.allPackages[idx].Upgradable = false
+				a.allPackages[idx].NewVersion = ""
 				delete(a.upgradableMap, name)
 			}
 		}

@@ -24,65 +24,73 @@ func LoadAllAvailableInfo() map[string]PackageInfo {
 	info := make(map[string]PackageInfo, 100000)
 
 	for _, f := range files {
-		file, err := os.Open(f)
-		if err != nil {
-			continue
-		}
-
-		scanner := bufio.NewScanner(file)
-		scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
-
-		var curPkg, curVer, curSize, curSection, curArch string
-
-		flush := func() {
-			if curPkg != "" {
-				// Overwrite so later files (updates/security, higher apt priority)
-				// take precedence over earlier ones (backports, lower priority).
-				info[curPkg] = PackageInfo{
-					Version:      curVer,
-					Size:         formatSize(curSize),
-					Section:      curSection,
-					Architecture: curArch,
-				}
-			}
-			curPkg, curVer, curSize, curSection, curArch = "", "", "", "", ""
-		}
-
-		for scanner.Scan() {
-			line := scanner.Text()
-			if len(line) == 0 {
-				flush()
-				continue
-			}
-			// Fast first-char dispatch to avoid HasPrefix on every line
-			switch line[0] {
-			case 'P':
-				if strings.HasPrefix(line, "Package: ") {
-					curPkg = line[9:]
-				}
-			case 'V':
-				if strings.HasPrefix(line, "Version: ") {
-					curVer = line[9:]
-				}
-			case 'I':
-				if strings.HasPrefix(line, "Installed-Size: ") {
-					curSize = line[16:]
-				}
-			case 'S':
-				if strings.HasPrefix(line, "Section: ") {
-					curSection = line[9:]
-				}
-			case 'A':
-				if strings.HasPrefix(line, "Architecture: ") {
-					curArch = line[14:]
-				}
-			}
-		}
-		flush()
-		file.Close()
+		parsePackageFile(f, info)
 	}
 
 	return info
+}
+
+// parsePackageFile parses a single *_Packages file and merges entries into info.
+// Later files overwrite earlier ones; note that filepath.Glob returns files in
+// lexicographic order, which may not exactly match apt pin priorities —
+// this is a known simplification that works for typical setups.
+func parsePackageFile(path string, info map[string]PackageInfo) {
+	file, err := os.Open(path)
+	if err != nil {
+		return
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
+
+	var curPkg, curVer, curSize, curSection, curArch string
+
+	flush := func() {
+		if curPkg != "" {
+			info[curPkg] = PackageInfo{
+				Version:      curVer,
+				Size:         formatSize(curSize),
+				Section:      curSection,
+				Architecture: curArch,
+			}
+		}
+		curPkg, curVer, curSize, curSection, curArch = "", "", "", "", ""
+	}
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		if len(line) == 0 {
+			flush()
+			continue
+		}
+		switch line[0] {
+		case 'P':
+			if strings.HasPrefix(line, "Package: ") {
+				curPkg = line[9:]
+			}
+		case 'V':
+			if strings.HasPrefix(line, "Version: ") {
+				curVer = line[9:]
+			}
+		case 'I':
+			if strings.HasPrefix(line, "Installed-Size: ") {
+				curSize = line[16:]
+			}
+		case 'S':
+			if strings.HasPrefix(line, "Section: ") {
+				curSection = line[9:]
+			}
+		case 'A':
+			if strings.HasPrefix(line, "Architecture: ") {
+				curArch = line[14:]
+			}
+		}
+	}
+	flush()
+	// Ignore scanner errors (e.g. token too long); entries parsed so far
+	// are still usable, and the background reload will recover.
+	_ = scanner.Err()
 }
 
 func SilentUpdate() error {

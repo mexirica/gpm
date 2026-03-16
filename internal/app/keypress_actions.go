@@ -55,7 +55,6 @@ func (a App) scrollPackagesDown() (tea.Model, tea.Cmd) {
 	if len(a.filtered) > 0 {
 		cmds = append(cmds, showPackageDetailCmd(a.filtered[a.selectedIdx].Name))
 	}
-	cmds = append(cmds, a.preloadVisiblePackageInfo())
 	return a, tea.Batch(cmds...)
 }
 
@@ -69,7 +68,6 @@ func (a App) scrollPackagesUp() (tea.Model, tea.Cmd) {
 	if len(a.filtered) > 0 {
 		cmds = append(cmds, showPackageDetailCmd(a.filtered[a.selectedIdx].Name))
 	}
-	cmds = append(cmds, a.preloadVisiblePackageInfo())
 	return a, tea.Batch(cmds...)
 }
 
