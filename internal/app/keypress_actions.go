@@ -275,8 +275,6 @@ func (a App) upgradeAllPackages() (tea.Model, tea.Cmd) {
 		}
 		return a, nil
 	}
-		return a, nil
-	}
 	a.pendingExecOp = "upgrade-all"
 	a.pendingExecPkgs = names
 	a.pendingExecCount = 1
