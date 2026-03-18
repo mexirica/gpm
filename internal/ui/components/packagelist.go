@@ -149,9 +149,16 @@ func RenderPackageList(packages []model.Package, selected int, offset int, maxVi
 
 		name := pkg.Name
 		isPinned := pkg.Pinned
-		if len(name) > colName {
-			name = name[:colName-1] + "…"
+		pinnedSuffix := ""
+		maxLen := colName
+		if isPinned {
+			pinnedSuffix = " 📌"
+			maxLen -= 3 // reserve space for " 📌" (1 space + 2-column emoji)
 		}
+		if len(name) > maxLen {
+			name = name[:maxLen-1] + "…"
+		}
+		name += pinnedSuffix
 
 		version := pkg.Version
 		if pkg.NewVersion != "" {
@@ -172,13 +179,6 @@ func RenderPackageList(packages []model.Package, selected int, offset int, maxVi
 		namePad := colName - len(name)
 		if namePad < 0 {
 			namePad = 0
-		}
-		if isPinned {
-			name = name + " 📌"
-			namePad -= 3 // " 📌" = space(1) + emoji display width(2)
-			if namePad < 0 {
-				namePad = 0
-			}
 		}
 		versionPad := colVersion - len(version)
 		if versionPad < 0 {

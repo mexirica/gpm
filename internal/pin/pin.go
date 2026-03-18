@@ -63,13 +63,17 @@ func (s *Store) Toggle(name string) bool {
 		if p == name {
 			s.Packages = append(s.Packages[:i], s.Packages[i+1:]...)
 			s.mu.Unlock()
-			_ = s.save()
+			if err := s.save(); err != nil {
+				errlog.Load().Log("pin", fmt.Sprintf("failed to save %s: %v", s.path, err))
+			}
 			return false
 		}
 	}
 	s.Packages = append(s.Packages, name)
 	s.mu.Unlock()
-	_ = s.save()
+	if err := s.save(); err != nil {
+		errlog.Load().Log("pin", fmt.Sprintf("failed to save %s: %v", s.path, err))
+	}
 	return true
 }
 
