@@ -134,6 +134,7 @@ func (a App) renderBasicDetail(pkg model.Package) string {
 		status = "Installed"
 		statusStyle = lipgloss.NewStyle().Foreground(ui.ColorSuccess).Bold(true)
 	}
+
 	fmt.Fprintf(&b, "  %s %s %s\n", lbl.Render("Status"), sepStyle.Render(":"), statusStyle.Render(status))
 
 	if pkg.NewVersion != "" {

@@ -148,6 +148,9 @@ func RenderPackageList(packages []model.Package, selected int, offset int, maxVi
 		}
 
 		name := pkg.Name
+		if pkg.Pinned {
+			name += " 📌"
+		}
 		if len(name) > colName {
 			name = name[:colName-1] + "…"
 		}

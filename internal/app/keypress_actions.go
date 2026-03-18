@@ -142,6 +142,9 @@ func (a App) dispatchPackageAction(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
 	case "H":
 		model, cmd := a.holdSelectedPackages()
 		return model, cmd, true
+	case "F":
+		model, cmd := a.togglePinPackages()
+		return model, cmd, true
 	case "c":
 		model, cmd := a.cleanupAllPackages()
 		return model, cmd, true
@@ -349,4 +352,66 @@ func (a App) switchTab(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
 
 	cmd := a.activateTab()
 	return a, cmd, true
+}
+
+func (a App) togglePinPackages() (tea.Model, tea.Cmd) {
+	var names []string
+	var currentName string
+	if len(a.selected) > 0 {
+		for name := range a.selected {
+			names = append(names, name)
+		}
+	} else if len(a.filtered) > 0 && a.selectedIdx < len(a.filtered) {
+		currentName = a.filtered[a.selectedIdx].Name
+		names = append(names, currentName)
+	}
+	if len(names) == 0 {
+		return a, nil
+	}
+
+	var pinned, unpinned int
+	for _, name := range names {
+		if a.pinStore.Toggle(name) {
+			a.pinnedSet[name] = true
+			pinned++
+		} else {
+			delete(a.pinnedSet, name)
+			unpinned++
+		}
+	}
+
+	// Update Pinned flag on allPackages
+	for _, name := range names {
+		if idx, ok := a.pkgIndex[name]; ok {
+			a.allPackages[idx].Pinned = a.pinnedSet[name]
+		}
+	}
+
+	a.applyFilter()
+	a.selected = make(map[string]bool)
+
+	// Restore cursor to the same package after reorder
+	if currentName != "" {
+		for i, p := range a.filtered {
+			if p.Name == currentName {
+				a.selectedIdx = i
+				a.adjustPackageScroll()
+				break
+			}
+		}
+	}
+
+	if pinned > 0 && unpinned > 0 {
+		a.status = fmt.Sprintf("Pinned %d, unpinned %d packages", pinned, unpinned)
+	} else if pinned > 0 {
+		a.status = fmt.Sprintf("Pinned %d package(s)", pinned)
+	} else {
+		a.status = fmt.Sprintf("Unpinned %d package(s)", unpinned)
+	}
+
+	var cmd tea.Cmd
+	if len(a.filtered) > 0 {
+		cmd = showPackageDetailCmd(a.filtered[a.selectedIdx].Name)
+	}
+	return a, cmd
 }

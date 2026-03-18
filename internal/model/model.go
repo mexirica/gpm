@@ -12,4 +12,5 @@ type Package struct {
 	Architecture   string
 	SecurityUpdate bool
 	Held           bool
+	Pinned         bool
 }

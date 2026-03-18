@@ -80,7 +80,8 @@ func (a *App) applyFilter() {
 			}
 		}
 	default:
-		source = a.allPackages
+		source = make([]model.Package, len(a.allPackages))
+		copy(source, a.allPackages)
 	}
 
 	af := filter.Parse(a.filterQuery)
@@ -184,6 +185,15 @@ func (a *App) applyFilter() {
 				return !less
 			}
 			return less
+		})
+	}
+
+	// Push pinned packages to the top, preserving relative order
+	if len(a.pinnedSet) > 0 {
+		sort.SliceStable(a.filtered, func(i, j int) bool {
+			pi := a.pinnedSet[a.filtered[i].Name]
+			pj := a.pinnedSet[a.filtered[j].Name]
+			return pi && !pj
 		})
 	}
 

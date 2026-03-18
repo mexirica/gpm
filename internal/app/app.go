@@ -16,6 +16,7 @@ import (
 	"github.com/mexirica/aptui/internal/filter"
 	"github.com/mexirica/aptui/internal/history"
 	"github.com/mexirica/aptui/internal/model"
+	"github.com/mexirica/aptui/internal/pin"
 	"github.com/mexirica/aptui/internal/ui"
 )
 
@@ -108,6 +109,9 @@ type App struct {
 	holdPending int
 	holdFailed  bool
 
+	pinStore  *pin.Store
+	pinnedSet map[string]bool
+
 	allNamesLoaded bool
 	installedCount int
 
@@ -150,6 +154,8 @@ func New() App {
 	h.Styles.ShortSeparator = lipgloss.NewStyle().Foreground(lipgloss.Color("#555555"))
 	h.Styles.FullSeparator = lipgloss.NewStyle().Foreground(lipgloss.Color("#555555"))
 
+	ps := pin.Load()
+
 	return App{
 		upgradableMap:    make(map[string]model.Package),
 		selected:         make(map[string]bool),
@@ -157,6 +163,8 @@ func New() App {
 		pkgIndex:         make(map[string]int),
 		autoremovableSet: make(map[string]bool),
 		heldSet:          make(map[string]bool),
+		pinStore:         ps,
+		pinnedSet:        ps.Set(),
 		searchInput:      ti,
 		ppaInput:         pi,
 		spinner:          s,
