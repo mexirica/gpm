@@ -46,6 +46,8 @@ func parsePackageFile(path string, info map[string]PackageInfo) {
 
 	var curPkg, curVer, curSize, curSection, curArch string
 
+	var curDesc string
+
 	flush := func() {
 		if curPkg != "" {
 			info[curPkg] = PackageInfo{
@@ -53,9 +55,10 @@ func parsePackageFile(path string, info map[string]PackageInfo) {
 				Size:         formatSize(curSize),
 				Section:      curSection,
 				Architecture: curArch,
+				Description:  curDesc,
 			}
 		}
-		curPkg, curVer, curSize, curSection, curArch = "", "", "", "", ""
+		curPkg, curVer, curSize, curSection, curArch, curDesc = "", "", "", "", "", ""
 	}
 
 	for scanner.Scan() {
@@ -84,6 +87,14 @@ func parsePackageFile(path string, info map[string]PackageInfo) {
 		case 'A':
 			if strings.HasPrefix(line, "Architecture: ") {
 				curArch = line[14:]
+			}
+		case 'D':
+			if strings.HasPrefix(line, "Description") && !strings.HasPrefix(line, "Description-md5") {
+				if curDesc == "" {
+					if idx := strings.Index(line, ": "); idx != -1 {
+						curDesc = line[idx+2:]
+					}
+				}
 			}
 		}
 	}
@@ -140,7 +151,7 @@ func ListAutoremovable() ([]string, error) {
 
 func ListInstalled() ([]model.Package, error) {
 	cmd := exec.Command("dpkg-query", "-W",
-		"-f=${Package}\t${Version}\t${Installed-Size}\t${Description}\t${Section}\t${Architecture}\n")
+		"-f=${Package}\t${Version}\t${Installed-Size}\t${binary:Summary}\t${Section}\t${Architecture}\n")
 	var out bytes.Buffer
 	var stderr bytes.Buffer
 	cmd.Stdout = &out
@@ -555,11 +566,12 @@ type PackageInfo struct {
 	Size         string
 	Section      string
 	Architecture string
+	Description  string
 }
 
 // ParseShowEntry parses a single apt-cache show output and returns PackageInfo.
 func ParseShowEntry(info string) PackageInfo {
-	var ver, size, section, arch string
+	var ver, size, section, arch, desc string
 	for _, line := range strings.Split(info, "\n") {
 		if line == "" && ver != "" {
 			break // only first entry
@@ -572,6 +584,12 @@ func ParseShowEntry(info string) PackageInfo {
 			section = strings.TrimPrefix(line, "Section: ")
 		} else if strings.HasPrefix(line, "Architecture: ") {
 			arch = strings.TrimPrefix(line, "Architecture: ")
+		} else if strings.HasPrefix(line, "Description") && !strings.HasPrefix(line, "Description-md5") {
+			if desc == "" {
+				if idx := strings.Index(line, ": "); idx != -1 {
+					desc = line[idx+2:]
+				}
+			}
 		}
 	}
 	return PackageInfo{
@@ -579,6 +597,7 @@ func ParseShowEntry(info string) PackageInfo {
 		Size:         formatSize(size),
 		Section:      section,
 		Architecture: arch,
+		Description:  desc,
 	}
 }
 

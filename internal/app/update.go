@@ -140,6 +140,9 @@ func (a App) onAllPackagesLoaded(msg allPackagesMsg) (tea.Model, tea.Cmd) {
 			if p.Architecture == "" {
 				p.Architecture = info.Architecture
 			}
+			if p.Description == "" {
+				p.Description = info.Description
+			}
 		}
 		all = append(all, p)
 		seen[p.Name] = true
@@ -153,6 +156,7 @@ func (a App) onAllPackagesLoaded(msg allPackagesMsg) (tea.Model, tea.Cmd) {
 				Size:         info.Size,
 				Section:      info.Section,
 				Architecture: info.Architecture,
+				Description:  info.Description,
 			}
 			all = append(all, pkg)
 			seen[name] = true
@@ -195,6 +199,7 @@ func (a App) onSilentUpdateDone(msg silentUpdateDoneMsg) (tea.Model, tea.Cmd) {
 					pkg.Size = info.Size
 					pkg.Section = info.Section
 					pkg.Architecture = info.Architecture
+					pkg.Description = info.Description
 				}
 				a.pkgIndex[name] = len(a.allPackages)
 				a.allPackages = append(a.allPackages, pkg)
@@ -272,11 +277,17 @@ func (a App) onSearchResultLoaded(msg searchResultMsg) (tea.Model, tea.Cmd) {
 			msg.pkgs[i].Size = inst.Size
 			msg.pkgs[i].Section = inst.Section
 			msg.pkgs[i].Architecture = inst.Architecture
+			if msg.pkgs[i].Description == "" {
+				msg.pkgs[i].Description = inst.Description
+			}
 		} else if info, ok := a.infoCache[msg.pkgs[i].Name]; ok {
 			msg.pkgs[i].NewVersion = info.Version
 			msg.pkgs[i].Size = info.Size
 			msg.pkgs[i].Section = info.Section
 			msg.pkgs[i].Architecture = info.Architecture
+			if msg.pkgs[i].Description == "" {
+				msg.pkgs[i].Description = info.Description
+			}
 		}
 	}
 	a.filtered = msg.pkgs
@@ -314,6 +325,9 @@ func (a App) onPackageDetailLoaded(msg detailLoadedMsg) (tea.Model, tea.Cmd) {
 					if a.filtered[i].Architecture == "" {
 						a.filtered[i].Architecture = pi.Architecture
 					}
+					if a.filtered[i].Description == "" {
+						a.filtered[i].Description = pi.Description
+					}
 					break
 				}
 			}
@@ -329,6 +343,9 @@ func (a App) onPackageDetailLoaded(msg detailLoadedMsg) (tea.Model, tea.Cmd) {
 				}
 				if a.allPackages[idx].Architecture == "" {
 					a.allPackages[idx].Architecture = pi.Architecture
+				}
+				if a.allPackages[idx].Description == "" {
+					a.allPackages[idx].Description = pi.Description
 				}
 			}
 		}
