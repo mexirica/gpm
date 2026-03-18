@@ -302,7 +302,7 @@ func TestParsePackageFileDescription(t *testing.T) {
 	content := "Package: testpkg\nVersion: 1.0\nInstalled-Size: 100\nSection: utils\nArchitecture: amd64\nDescription: A test package\nDescription-md5: abc123\n\nPackage: localized\nVersion: 2.0\nDescription-pt_BR: Descricao em portugues\nDescription: English description\n"
 	dir := t.TempDir()
 	path := dir + "/test_Packages"
-	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	info := make(map[string]PackageInfo)
