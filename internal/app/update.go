@@ -205,6 +205,7 @@ func (a App) onSilentUpdateDone(msg silentUpdateDoneMsg) (tea.Model, tea.Cmd) {
 					pkg.Architecture = info.Architecture
 					pkg.Description = info.Description
 				}
+				pkg.Pinned = a.pinnedSet[name]
 				a.pkgIndex[name] = len(a.allPackages)
 				a.allPackages = append(a.allPackages, pkg)
 				changed = true

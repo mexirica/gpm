@@ -42,6 +42,7 @@ Built with [Bubble Tea](https://github.com/charmbracelet/bubbletea), [Lip Gloss]
 - **PPA management** — list, add, remove, enable and disable PPA repositories ([docs](docs/ppa.md))
 - **Cleanup** — dedicated tab listing autoremovable packages; clean them all with `c`
 - **Error log** — all errors are captured and shown in a dedicated tab with source, timestamp and full message detail
+- **Pin favorites** — pin packages with `F` to keep them at the top of the list (📌); pins are persisted across sessions
 - **Inline detail panel** — shows package metadata (version, size, dependencies, homepage, etc.)
 
 ## Installation
@@ -134,6 +135,7 @@ See the full [search & filter documentation](docs/filter.md) for all available o
 | `G` | Upgrade all packages (`apt-get upgrade`) |
 | `p` | Purge package (or all selected) |
 | `c` | Clean up all autoremovable packages |
+| `F` | Pin / unpin package (or all selected) |
 | `U` | Run `apt-get update` |
 | `ctrl+r` | Refresh package list |
 

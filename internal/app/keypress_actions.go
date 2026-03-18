@@ -357,12 +357,15 @@ func (a App) switchTab(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
 func (a App) togglePinPackages() (tea.Model, tea.Cmd) {
 	var names []string
 	var currentName string
+	// Capture highlighted package before reorder
+	if len(a.filtered) > 0 && a.selectedIdx < len(a.filtered) {
+		currentName = a.filtered[a.selectedIdx].Name
+	}
 	if len(a.selected) > 0 {
 		for name := range a.selected {
 			names = append(names, name)
 		}
-	} else if len(a.filtered) > 0 && a.selectedIdx < len(a.filtered) {
-		currentName = a.filtered[a.selectedIdx].Name
+	} else if currentName != "" {
 		names = append(names, currentName)
 	}
 	if len(names) == 0 {
@@ -391,13 +394,11 @@ func (a App) togglePinPackages() (tea.Model, tea.Cmd) {
 	a.selected = make(map[string]bool)
 
 	// Restore cursor to the same package after reorder
-	if currentName != "" {
-		for i, p := range a.filtered {
-			if p.Name == currentName {
-				a.selectedIdx = i
-				a.adjustPackageScroll()
-				break
-			}
+	for i, p := range a.filtered {
+		if p.Name == currentName {
+			a.selectedIdx = i
+			a.adjustPackageScroll()
+			break
 		}
 	}
 

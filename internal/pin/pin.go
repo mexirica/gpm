@@ -29,7 +29,9 @@ func Load() *Store {
 	if err != nil {
 		return s
 	}
-	_ = json.Unmarshal(data, s)
+	if err := json.Unmarshal(data, s); err != nil {
+		return s
+	}
 	s.path = p
 	return s
 }
@@ -54,16 +56,16 @@ func (s *Store) Set() map[string]bool {
 // Returns true if the package is now pinned, false if unpinned.
 func (s *Store) Toggle(name string) bool {
 	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	for i, p := range s.Packages {
 		if p == name {
 			s.Packages = append(s.Packages[:i], s.Packages[i+1:]...)
+			s.mu.Unlock()
 			_ = s.save()
 			return false
 		}
 	}
 	s.Packages = append(s.Packages, name)
+	s.mu.Unlock()
 	_ = s.save()
 	return true
 }
