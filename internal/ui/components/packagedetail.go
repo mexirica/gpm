@@ -71,6 +71,11 @@ func parseFields(info string) map[string]string {
 		if len(parts) == 2 {
 			key := strings.TrimSpace(parts[0])
 			val := strings.TrimSpace(parts[1])
+			if strings.HasPrefix(key, "Description-") && key != "Description-md5" {
+				if _, exists := fields["Description"]; !exists {
+					key = "Description"
+				}
+			}
 			fields[key] = val
 			lastKey = key
 		}
