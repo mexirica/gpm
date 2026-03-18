@@ -90,8 +90,10 @@ func parsePackageFile(path string, info map[string]PackageInfo) {
 			}
 		case 'D':
 			if strings.HasPrefix(line, "Description") && !strings.HasPrefix(line, "Description-md5") {
-				if idx := strings.Index(line, ": "); idx != -1 {
-					curDesc = line[idx+2:]
+				if curDesc == "" {
+					if idx := strings.Index(line, ": "); idx != -1 {
+						curDesc = line[idx+2:]
+					}
 				}
 			}
 		}
@@ -583,8 +585,10 @@ func ParseShowEntry(info string) PackageInfo {
 		} else if strings.HasPrefix(line, "Architecture: ") {
 			arch = strings.TrimPrefix(line, "Architecture: ")
 		} else if strings.HasPrefix(line, "Description") && !strings.HasPrefix(line, "Description-md5") {
-			if idx := strings.Index(line, ": "); idx != -1 {
-				desc = line[idx+2:]
+			if desc == "" {
+				if idx := strings.Index(line, ": "); idx != -1 {
+					desc = line[idx+2:]
+				}
 			}
 		}
 	}

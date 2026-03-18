@@ -277,11 +277,17 @@ func (a App) onSearchResultLoaded(msg searchResultMsg) (tea.Model, tea.Cmd) {
 			msg.pkgs[i].Size = inst.Size
 			msg.pkgs[i].Section = inst.Section
 			msg.pkgs[i].Architecture = inst.Architecture
+			if msg.pkgs[i].Description == "" {
+				msg.pkgs[i].Description = inst.Description
+			}
 		} else if info, ok := a.infoCache[msg.pkgs[i].Name]; ok {
 			msg.pkgs[i].NewVersion = info.Version
 			msg.pkgs[i].Size = info.Size
 			msg.pkgs[i].Section = info.Section
 			msg.pkgs[i].Architecture = info.Architecture
+			if msg.pkgs[i].Description == "" {
+				msg.pkgs[i].Description = info.Description
+			}
 		}
 	}
 	a.filtered = msg.pkgs
