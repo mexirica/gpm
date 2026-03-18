@@ -188,8 +188,7 @@ func (a *App) applyFilter() {
 		})
 	}
 
-	// Push pinned packages to the top, preserving relative order
-	if len(a.pinnedSet) > 0 {
+	if len(a.pinnedSet) > 0 && sortCol == filter.SortNone && freeText == "" {
 		sort.SliceStable(a.filtered, func(i, j int) bool {
 			pi := a.pinnedSet[a.filtered[i].Name]
 			pj := a.pinnedSet[a.filtered[j].Name]
