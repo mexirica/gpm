@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
 	"github.com/mexirica/aptui/internal/fetch"
 	"github.com/mexirica/aptui/internal/ui"
 )

@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/mexirica/aptui/internal/history"
 	"github.com/mexirica/aptui/internal/ui"
 )
 
-func (a App) onTransactionKeypress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (a App) onTransactionKeypress(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "esc", "t":
 		return a.closeTransactionView()

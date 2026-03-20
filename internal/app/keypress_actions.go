@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/mexirica/aptui/internal/ui"
 )
 
-func (a App) dispatchNavigation(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
+func (a App) dispatchNavigation(msg tea.KeyPressMsg) (tea.Model, tea.Cmd, bool) {
 	switch msg.String() {
 	case "j", "down":
 		model, cmd := a.selectNextPackage()
@@ -74,9 +74,9 @@ func (a App) scrollPackagesUp() (tea.Model, tea.Cmd) {
 	return a, tea.Batch(cmds...)
 }
 
-func (a App) dispatchSelection(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
+func (a App) dispatchSelection(msg tea.KeyPressMsg) (tea.Model, tea.Cmd, bool) {
 	switch msg.String() {
-	case " ":
+	case "space":
 		model, cmd := a.togglePackageSelection()
 		return model, cmd, true
 	case "a":
@@ -125,7 +125,7 @@ func (a App) toggleSelectAll() (tea.Model, tea.Cmd) {
 	return a, nil
 }
 
-func (a App) dispatchPackageAction(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
+func (a App) dispatchPackageAction(msg tea.KeyPressMsg) (tea.Model, tea.Cmd, bool) {
 	switch msg.String() {
 	case "i":
 		model, cmd := a.installSelectedPackages()
@@ -375,7 +375,7 @@ func (a App) holdSelectedPackages() (tea.Model, tea.Cmd) {
 	return a, unholdBatchCmd(unholdNames)
 }
 
-func (a App) switchTab(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
+func (a App) switchTab(msg tea.KeyPressMsg) (tea.Model, tea.Cmd, bool) {
 	switch msg.String() {
 	case "tab":
 		a.activeTab = (a.activeTab + 1) % tabKind(len(tabDefs))

@@ -1,7 +1,7 @@
 // Package model defines the data structures and key bindings for the application.
 package model
 
-import "github.com/charmbracelet/bubbles/key"
+import "charm.land/bubbles/v2/key"
 
 type KeyMap struct {
 	Quit        key.Binding
@@ -31,6 +31,8 @@ type KeyMap struct {
 	ErrLogClear key.Binding
 	PPA         key.Binding
 	Pin         key.Binding
+	Export      key.Binding
+	Import      key.Binding
 	Tab         key.Binding
 }
 
@@ -144,6 +146,14 @@ var Keys = KeyMap{
 		key.WithKeys("F"),
 		key.WithHelp("F", "pin/unpin"),
 	),
+	Export: key.NewBinding(
+		key.WithKeys("E"),
+		key.WithHelp("E", "export packages"),
+	),
+	Import: key.NewBinding(
+		key.WithKeys("I"),
+		key.WithHelp("I", "import packages"),
+	),
 
 	Tab: key.NewBinding(
 		key.WithKeys("tab"),
@@ -161,6 +171,7 @@ func (k KeyMap) FullHelp() [][]key.Binding {
 		{k.Enter, k.Select, k.SelectAll, k.Search},
 		{k.Install, k.Remove, k.Upgrade, k.UpgradeAll, k.Purge, k.Hold, k.Pin},
 		{k.CleanupAll, k.ErrLogClear, k.AptUpdate, k.Fetch, k.PPA, k.Refresh, k.Transaction},
+		{k.Export, k.Import},
 		{k.TranUndo, k.TranRedo, k.Help, k.Quit},
 	}
 }

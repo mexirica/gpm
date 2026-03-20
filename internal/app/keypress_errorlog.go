@@ -1,12 +1,12 @@
 package app
 
 import (
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/mexirica/aptui/internal/ui"
 )
 
-func (a App) dispatchErrorLog(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
+func (a App) dispatchErrorLog(msg tea.KeyPressMsg) (tea.Model, tea.Cmd, bool) {
 	if a.activeTab != tabErrorLog {
 		return a, nil, false
 	}

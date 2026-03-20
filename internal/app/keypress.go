@@ -3,11 +3,16 @@ package app
 import (
 	"fmt"
 
-	"github.com/charmbracelet/bubbles/textinput"
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
-func (a App) onKeypress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (a App) onKeypress(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	if a.importConfirm {
+		return a.onImportConfirmKeypress(msg)
+	}
+	if a.exportConfirm && msg.String() != "E" && msg.String() != "esc" {
+		a.exportConfirm = false
+	}
 	if model, cmd, handled := a.dispatchErrorLog(msg); handled {
 		return model, cmd
 	}
@@ -45,6 +50,10 @@ func (a App) onKeypress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return a.clearErrorLog()
 	case "U":
 		return a.runAptUpdate()
+	case "E":
+		return a.exportInstalledPackages()
+	case "I":
+		return a.importPackages()
 	}
 
 	return a, nil
@@ -58,12 +67,17 @@ func (a App) toggleHelp() (tea.Model, tea.Cmd) {
 func (a App) openSearch() (tea.Model, tea.Cmd) {
 	a.searching = true
 	a.filterQueryBeforeEdit = a.filterQuery
-	a.searchInput.Focus()
+	cmd := a.searchInput.Focus()
 	a.searchInput.SetValue(a.filterQuery)
-	return a, textinput.Blink
+	return a, cmd
 }
 
 func (a App) clearFilterOrSearch() (tea.Model, tea.Cmd) {
+	if a.exportConfirm {
+		a.exportConfirm = false
+		a.status = fmt.Sprintf("%d packages ", len(a.filtered))
+		return a, nil
+	}
 	if a.filterQuery == "" {
 		return a, nil
 	}

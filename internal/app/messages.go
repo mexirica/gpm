@@ -82,3 +82,14 @@ type ppaToggleMsg struct {
 	action string
 	err    error
 }
+
+type exportFinishedMsg struct {
+	path string
+	err  error
+}
+
+type importFinishedMsg struct {
+	names []string
+	path  string
+	err   error
+}

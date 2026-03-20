@@ -3,14 +3,13 @@ package app
 import (
 	"fmt"
 
-	"github.com/charmbracelet/bubbles/textinput"
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/mexirica/aptui/internal/apt"
 	"github.com/mexirica/aptui/internal/ui"
 )
 
-func (a App) onPPAKeypress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (a App) onPPAKeypress(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	if a.ppaAdding {
 		return a.onPPAInputKeypress(msg)
 	}
@@ -42,8 +41,8 @@ func (a App) onPPAKeypress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return a, nil
 }
 
-func (a App) onPPAInputKeypress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch msg.Type {
+func (a App) onPPAInputKeypress(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	switch msg.Key().Code {
 	case tea.KeyEsc:
 		a.ppaAdding = false
 		a.ppaInput.Blur()
@@ -106,9 +105,9 @@ func (a App) scrollPPAsUp() (tea.Model, tea.Cmd) {
 func (a App) startAddPPA() (tea.Model, tea.Cmd) {
 	a.ppaAdding = true
 	a.ppaInput.SetValue("")
-	a.ppaInput.Focus()
+	cmd := a.ppaInput.Focus()
 	a.status = "Enter PPA (e.g. ppa:mozillateam/ppa) | enter: confirm • esc: cancel"
-	return a, textinput.Blink
+	return a, cmd
 }
 
 func (a App) submitAddPPA() (tea.Model, tea.Cmd) {

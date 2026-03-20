@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/mexirica/aptui/internal/apt"
 	"github.com/mexirica/aptui/internal/model"
 	"github.com/mexirica/aptui/internal/ui"
@@ -187,14 +187,14 @@ func TestToggleSelection(t *testing.T) {
 	a.selectedIdx = 0
 
 	// Toggle select
-	m, _ := a.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{' '}})
+	m, _ := a.Update(tea.KeyPressMsg{Code: ' ', Text: " "})
 	app := m.(App)
 	if !app.selected["vim"] {
 		t.Error("vim should be selected after space")
 	}
 
 	// Toggle deselect
-	m, _ = app.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{' '}})
+	m, _ = app.Update(tea.KeyPressMsg{Code: ' ', Text: " "})
 	app = m.(App)
 	if app.selected["vim"] {
 		t.Error("vim should be deselected after second space")
@@ -208,14 +208,14 @@ func TestSelectAll(t *testing.T) {
 	}
 
 	// Select all
-	m, _ := a.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}})
+	m, _ := a.Update(tea.KeyPressMsg{Code: 'a', Text: "a"})
 	app := m.(App)
 	if len(app.selected) != 3 {
 		t.Errorf("expected 3 selected, got %d", len(app.selected))
 	}
 
 	// Toggle again to deselect all
-	m, _ = app.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}})
+	m, _ = app.Update(tea.KeyPressMsg{Code: 'a', Text: "a"})
 	app = m.(App)
 	if len(app.selected) != 0 {
 		t.Errorf("expected 0 selected after toggle, got %d", len(app.selected))
@@ -229,7 +229,7 @@ func TestNavigationDown(t *testing.T) {
 	}
 	a.selectedIdx = 0
 
-	m, _ := a.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	m, _ := a.Update(tea.KeyPressMsg{Code: 'j', Text: "j"})
 	app := m.(App)
 	if app.selectedIdx != 1 {
 		t.Errorf("expected selectedIdx=1 after j, got %d", app.selectedIdx)
@@ -243,7 +243,7 @@ func TestNavigationUp(t *testing.T) {
 	}
 	a.selectedIdx = 2
 
-	m, _ := a.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}})
+	m, _ := a.Update(tea.KeyPressMsg{Code: 'k', Text: "k"})
 	app := m.(App)
 	if app.selectedIdx != 1 {
 		t.Errorf("expected selectedIdx=1 after k, got %d", app.selectedIdx)
@@ -258,7 +258,7 @@ func TestNavigationBounds(t *testing.T) {
 
 	// Can't go above 0
 	a.selectedIdx = 0
-	m, _ := a.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}})
+	m, _ := a.Update(tea.KeyPressMsg{Code: 'k', Text: "k"})
 	app := m.(App)
 	if app.selectedIdx != 0 {
 		t.Errorf("should stay at 0, got %d", app.selectedIdx)
@@ -266,7 +266,7 @@ func TestNavigationBounds(t *testing.T) {
 
 	// Can't go below len-1
 	a.selectedIdx = 1
-	m, _ = a.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	m, _ = a.Update(tea.KeyPressMsg{Code: 'j', Text: "j"})
 	app = m.(App)
 	if app.selectedIdx != 1 {
 		t.Errorf("should stay at 1, got %d", app.selectedIdx)
@@ -287,35 +287,35 @@ func TestTabSwitching(t *testing.T) {
 	}
 
 	// Press tab -> tabInstalled
-	m, _ := a.Update(tea.KeyMsg{Type: tea.KeyTab})
+	m, _ := a.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 	app := m.(App)
 	if app.activeTab != tabInstalled {
 		t.Errorf("expected tabInstalled, got %d", app.activeTab)
 	}
 
 	// Press tab again -> tabUpgradable
-	m, _ = app.Update(tea.KeyMsg{Type: tea.KeyTab})
+	m, _ = app.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 	app = m.(App)
 	if app.activeTab != tabUpgradable {
 		t.Errorf("expected tabUpgradable, got %d", app.activeTab)
 	}
 
 	// Press tab again -> tabCleanup
-	m, _ = app.Update(tea.KeyMsg{Type: tea.KeyTab})
+	m, _ = app.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 	app = m.(App)
 	if app.activeTab != tabCleanup {
 		t.Errorf("expected tabCleanup, got %d", app.activeTab)
 	}
 
 	// Press tab again -> tabErrorLog
-	m, _ = app.Update(tea.KeyMsg{Type: tea.KeyTab})
+	m, _ = app.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 	app = m.(App)
 	if app.activeTab != tabErrorLog {
 		t.Errorf("expected tabErrorLog, got %d", app.activeTab)
 	}
 
 	// Press tab again -> back to tabAll
-	m, _ = app.Update(tea.KeyMsg{Type: tea.KeyTab})
+	m, _ = app.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 	app = m.(App)
 	if app.activeTab != tabAll {
 		t.Errorf("expected tabAll, got %d", app.activeTab)
@@ -326,14 +326,14 @@ func TestTransactionViewToggle(t *testing.T) {
 	a := newTestApp()
 
 	// Open transaction view
-	m, _ := a.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'t'}})
+	m, _ := a.Update(tea.KeyPressMsg{Code: 't', Text: "t"})
 	app := m.(App)
 	if !app.transactionView {
 		t.Error("expected transactionView=true after 't'")
 	}
 
 	// Close transaction view with esc
-	m, _ = app.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	m, _ = app.Update(tea.KeyPressMsg{Code: tea.KeyEsc})
 	app = m.(App)
 	if app.transactionView {
 		t.Error("expected transactionView=false after esc")
@@ -348,14 +348,14 @@ func TestSearchMode(t *testing.T) {
 	a.applyFilter()
 
 	// Enter search mode
-	m, _ := a.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'/'}})
+	m, _ := a.Update(tea.KeyPressMsg{Code: '/', Text: "/"})
 	app := m.(App)
 	if !app.searching {
 		t.Error("expected searching=true after '/'")
 	}
 
 	// Cancel search with esc
-	m, _ = app.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	m, _ = app.Update(tea.KeyPressMsg{Code: tea.KeyEsc})
 	app = m.(App)
 	if app.searching {
 		t.Error("expected searching=false after esc")
@@ -368,13 +368,13 @@ func TestHelpToggle(t *testing.T) {
 		t.Error("help should start collapsed")
 	}
 
-	m, _ := a.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'h'}})
+	m, _ := a.Update(tea.KeyPressMsg{Code: 'h', Text: "h"})
 	app := m.(App)
 	if !app.help.ShowAll {
 		t.Error("expected help.ShowAll=true after 'h'")
 	}
 
-	m, _ = app.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'h'}})
+	m, _ = app.Update(tea.KeyPressMsg{Code: 'h', Text: "h"})
 	app = m.(App)
 	if app.help.ShowAll {
 		t.Error("expected help.ShowAll=false after second 'h'")
@@ -389,7 +389,7 @@ func TestViewNotEmpty(t *testing.T) {
 	a.applyFilter()
 
 	v := a.View()
-	if v == "" {
+	if v.Content == "" {
 		t.Error("View should not be empty")
 	}
 }
@@ -399,8 +399,8 @@ func TestViewLoadingState(t *testing.T) {
 	a.width = 0
 
 	v := a.View()
-	if v != fmt.Sprintf("Updating and loading packages %s", a.spinner.View()) {
-		t.Errorf("expected 'Updating and loading packages ...' when width=0, got %q", v)
+	if v.Content != fmt.Sprintf("Updating and loading packages %s", a.spinner.View()) {
+		t.Errorf("expected 'Updating and loading packages ...' when width=0, got %q", v.Content)
 	}
 }
 
@@ -646,7 +646,7 @@ func TestInstallAlreadyInstalled(t *testing.T) {
 	}
 	a.selectedIdx = 0
 
-	m, _ := a.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'i'}})
+	m, _ := a.Update(tea.KeyPressMsg{Code: 'i', Text: "i"})
 	app := m.(App)
 
 	if app.loading {
@@ -664,7 +664,7 @@ func TestRemoveNotInstalled(t *testing.T) {
 	}
 	a.selectedIdx = 0
 
-	m, _ := a.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'r'}})
+	m, _ := a.Update(tea.KeyPressMsg{Code: 'r', Text: "r"})
 	app := m.(App)
 
 	if app.loading {
@@ -679,7 +679,7 @@ func TestUpgradeNotUpgradable(t *testing.T) {
 	}
 	a.selectedIdx = 0
 
-	m, _ := a.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'u'}})
+	m, _ := a.Update(tea.KeyPressMsg{Code: 'u', Text: "u"})
 	app := m.(App)
 
 	if app.loading {
@@ -691,7 +691,7 @@ func TestFetchViewToggle(t *testing.T) {
 	a := newTestApp()
 
 	// Open fetch view
-	m, _ := a.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'f'}})
+	m, _ := a.Update(tea.KeyPressMsg{Code: 'f', Text: "f"})
 	app := m.(App)
 	if !app.fetchView {
 		t.Error("expected fetchView=true after 'f'")
@@ -845,7 +845,7 @@ func TestSwitchTabBackward(t *testing.T) {
 		t.Fatal("expected initial tab to be tabAll")
 	}
 
-	m, _, handled := a.switchTab(tea.KeyMsg{Type: tea.KeyShiftTab})
+	m, _, handled := a.switchTab(tea.KeyPressMsg{Code: tea.KeyTab, Mod: tea.ModShift})
 	if !handled {
 		t.Fatal("expected switchTab to handle shift+tab")
 	}
@@ -854,7 +854,7 @@ func TestSwitchTabBackward(t *testing.T) {
 		t.Errorf("expected tabErrorLog after shift+tab from tabAll, got %d", app.activeTab)
 	}
 
-	m, _, _ = app.switchTab(tea.KeyMsg{Type: tea.KeyShiftTab})
+	m, _, _ = app.switchTab(tea.KeyPressMsg{Code: tea.KeyTab, Mod: tea.ModShift})
 	app = m.(App)
 	if app.activeTab != tabCleanup {
 		t.Errorf("expected tabCleanup after shift+tab from tabErrorLog, got %d", app.activeTab)
@@ -877,7 +877,7 @@ func TestUpgradeAllNoUpgradable(t *testing.T) {
 	a := newTestApp()
 	a.upgradableMap = map[string]model.Package{}
 
-	m, _ := a.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'G'}})
+	m, _ := a.Update(tea.KeyPressMsg{Code: 'G', Text: "G"})
 	app := m.(App)
 
 	if app.loading {
@@ -1107,7 +1107,7 @@ func TestRemoveEssentialPackageBlocked(t *testing.T) {
 	a.essentialSet = map[string]bool{"base-files": true}
 	a.selectedIdx = 0
 
-	m, _ := a.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'r'}})
+	m, _ := a.Update(tea.KeyPressMsg{Code: 'r', Text: "r"})
 	app := m.(App)
 
 	if app.loading {
@@ -1126,7 +1126,7 @@ func TestPurgeEssentialPackageBlocked(t *testing.T) {
 	a.essentialSet = map[string]bool{"base-files": true}
 	a.selectedIdx = 0
 
-	m, _ := a.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'p'}})
+	m, _ := a.Update(tea.KeyPressMsg{Code: 'p', Text: "p"})
 	app := m.(App)
 
 	if app.loading {
