@@ -47,6 +47,7 @@ func parsePackageFile(path string, info map[string]PackageInfo) {
 	var curPkg, curVer, curSize, curSection, curArch string
 
 	var curDesc string
+	var curEssential bool
 
 	flush := func() {
 		if curPkg != "" {
@@ -56,9 +57,11 @@ func parsePackageFile(path string, info map[string]PackageInfo) {
 				Section:      curSection,
 				Architecture: curArch,
 				Description:  curDesc,
+				Essential:    curEssential,
 			}
 		}
 		curPkg, curVer, curSize, curSection, curArch, curDesc = "", "", "", "", "", ""
+		curEssential = false
 	}
 
 	for scanner.Scan() {
@@ -95,6 +98,10 @@ func parsePackageFile(path string, info map[string]PackageInfo) {
 						curDesc = line[idx+2:]
 					}
 				}
+			}
+		case 'E':
+			if strings.HasPrefix(line, "Essential: yes") {
+				curEssential = true
 			}
 		}
 	}
@@ -229,6 +236,14 @@ func UpgradeBatchCmd(names []string) *exec.Cmd {
 	}
 	args = append(args, names...)
 	c := exec.Command("sudo", args...)
+	c.Stdin = os.Stdin
+	c.Stdout = os.Stdout
+	c.Stderr = os.Stderr
+	return c
+}
+
+func DistUpgradeCmd() *exec.Cmd {
+	c := exec.Command("sudo", "apt-get", "dist-upgrade", "-y")
 	c.Stdin = os.Stdin
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
@@ -567,11 +582,13 @@ type PackageInfo struct {
 	Section      string
 	Architecture string
 	Description  string
+	Essential    bool
 }
 
 // ParseShowEntry parses a single apt-cache show output and returns PackageInfo.
 func ParseShowEntry(info string) PackageInfo {
 	var ver, size, section, arch, desc string
+	var essential bool
 	for _, line := range strings.Split(info, "\n") {
 		if line == "" && ver != "" {
 			break // only first entry
@@ -584,6 +601,8 @@ func ParseShowEntry(info string) PackageInfo {
 			section = strings.TrimPrefix(line, "Section: ")
 		} else if strings.HasPrefix(line, "Architecture: ") {
 			arch = strings.TrimPrefix(line, "Architecture: ")
+		} else if strings.HasPrefix(line, "Essential: yes") {
+			essential = true
 		} else if strings.HasPrefix(line, "Description") && !strings.HasPrefix(line, "Description-md5") {
 			if desc == "" {
 				if idx := strings.Index(line, ": "); idx != -1 {
@@ -598,6 +617,7 @@ func ParseShowEntry(info string) PackageInfo {
 		Section:      section,
 		Architecture: arch,
 		Description:  desc,
+		Essential:    essential,
 	}
 }
 

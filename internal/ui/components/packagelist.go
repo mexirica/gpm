@@ -150,15 +150,20 @@ func RenderPackageList(packages []model.Package, selected int, offset int, maxVi
 		name := pkg.Name
 		isPinned := pkg.Pinned
 		pinnedSuffix := ""
+		essentialSuffix := ""
 		maxLen := colName
 		if isPinned {
 			pinnedSuffix = " 📌"
 			maxLen -= 3 // reserve space for " 📌" (1 space + 2-column emoji)
 		}
-		if len(name) > maxLen {
+		if pkg.Essential {
+			essentialSuffix = " 🛡"
+			maxLen -= 3 // reserve space for " 🛡" (1 space + 2-column emoji)
+		}
+		if len(name) > maxLen && maxLen > 0 {
 			name = name[:maxLen-1] + "…"
 		}
-		name += pinnedSuffix
+		name += pinnedSuffix + essentialSuffix
 
 		version := pkg.Version
 		if pkg.NewVersion != "" {

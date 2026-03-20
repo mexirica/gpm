@@ -114,8 +114,12 @@ func (a App) onAllPackagesLoaded(msg allPackagesMsg) (tea.Model, tea.Cmd) {
 	}
 	// Populate infoCache from bulk-loaded data
 	a.infoCache = make(map[string]apt.PackageInfo, len(msg.bulkInfo))
+	a.essentialSet = make(map[string]bool)
 	for name, info := range msg.bulkInfo {
 		a.infoCache[name] = info
+		if info.Essential {
+			a.essentialSet[name] = true
+		}
 	}
 
 	seen := make(map[string]bool, len(msg.installed)+len(msg.bulkInfo))
@@ -131,6 +135,9 @@ func (a App) onAllPackagesLoaded(msg allPackagesMsg) (tea.Model, tea.Cmd) {
 		}
 		if a.pinnedSet[p.Name] {
 			p.Pinned = true
+		}
+		if a.essentialSet[p.Name] {
+			p.Essential = true
 		}
 		// Enrich installed packages with bulk info if fields are missing
 		if info, ok := msg.bulkInfo[p.Name]; ok {
@@ -160,6 +167,7 @@ func (a App) onAllPackagesLoaded(msg allPackagesMsg) (tea.Model, tea.Cmd) {
 				Section:      info.Section,
 				Architecture: info.Architecture,
 				Pinned:       a.pinnedSet[name],
+				Essential:    info.Essential,
 				Description:  info.Description,
 			}
 			all = append(all, pkg)

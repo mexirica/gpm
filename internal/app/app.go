@@ -109,6 +109,8 @@ type App struct {
 	holdPending int
 	holdFailed  bool
 
+	essentialSet map[string]bool
+
 	pinStore  *pin.Store
 	pinnedSet map[string]bool
 
@@ -163,6 +165,7 @@ func New() App {
 		pkgIndex:         make(map[string]int),
 		autoremovableSet: make(map[string]bool),
 		heldSet:          make(map[string]bool),
+		essentialSet:     make(map[string]bool),
 		pinStore:         ps,
 		pinnedSet:        ps.Set(),
 		searchInput:      ti,

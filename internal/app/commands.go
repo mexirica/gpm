@@ -114,7 +114,7 @@ func loadTransactionDepsCmd(txIdx int, packages []string) tea.Cmd {
 }
 
 func upgradeAllPackagesCmd(names []string) tea.Cmd {
-	cmd := apt.UpgradeBatchCmd(names)
+	cmd := apt.DistUpgradeCmd()
 	return tea.ExecProcess(cmd, func(err error) tea.Msg {
 		return execFinishedMsg{op: "upgrade-all", name: strings.Join(names, " "), err: err}
 	})

@@ -20,6 +20,7 @@ type Operation string
 const (
 	OpInstall    Operation = "install"
 	OpRemove     Operation = "remove"
+	OpPurge      Operation = "purge"
 	OpUpgrade    Operation = "upgrade"
 	OpUpgradeAll Operation = "upgrade-all"
 )

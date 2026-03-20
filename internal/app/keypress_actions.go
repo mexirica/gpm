@@ -2,8 +2,11 @@ package app
 
 import (
 	"fmt"
+	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/mexirica/aptui/internal/ui"
 )
 
 func (a App) dispatchNavigation(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
@@ -181,13 +184,29 @@ func (a App) installSelectedPackages() (tea.Model, tea.Cmd) {
 func (a App) removeSelectedPackages() (tea.Model, tea.Cmd) {
 	var names []string
 	if len(a.selected) > 0 {
+		var blocked []string
 		for name := range a.selected {
+			if a.essentialSet[name] {
+				blocked = append(blocked, name)
+				continue
+			}
 			names = append(names, name)
+		}
+		if len(blocked) > 0 && len(names) == 0 {
+			a.status = ui.ErrorStyle.Render(fmt.Sprintf("Cannot remove essential package(s): %s", strings.Join(blocked, ", ")))
+			return a, nil
+		}
+		if len(blocked) > 0 {
+			a.status = ui.ErrorStyle.Render(fmt.Sprintf("Skipping essential: %s", strings.Join(blocked, ", ")))
 		}
 	} else if len(a.filtered) > 0 && a.selectedIdx < len(a.filtered) {
 		pkg := a.filtered[a.selectedIdx]
 		if !pkg.Installed {
 			a.status = fmt.Sprintf("'%s' is not installed.", pkg.Name)
+			return a, nil
+		}
+		if pkg.Essential {
+			a.status = ui.ErrorStyle.Render(fmt.Sprintf("Cannot remove '%s': package is essential.", pkg.Name))
 			return a, nil
 		}
 		names = append(names, pkg.Name)
@@ -207,13 +226,29 @@ func (a App) removeSelectedPackages() (tea.Model, tea.Cmd) {
 func (a App) purgeSelectedPackages() (tea.Model, tea.Cmd) {
 	var names []string
 	if len(a.selected) > 0 {
+		var blocked []string
 		for name := range a.selected {
+			if a.essentialSet[name] {
+				blocked = append(blocked, name)
+				continue
+			}
 			names = append(names, name)
+		}
+		if len(blocked) > 0 && len(names) == 0 {
+			a.status = ui.ErrorStyle.Render(fmt.Sprintf("Cannot purge essential package(s): %s", strings.Join(blocked, ", ")))
+			return a, nil
+		}
+		if len(blocked) > 0 {
+			a.status = ui.ErrorStyle.Render(fmt.Sprintf("Skipping essential: %s", strings.Join(blocked, ", ")))
 		}
 	} else if len(a.filtered) > 0 && a.selectedIdx < len(a.filtered) {
 		pkg := a.filtered[a.selectedIdx]
 		if !pkg.Installed {
 			a.status = fmt.Sprintf("'%s' is not installed.", pkg.Name)
+			return a, nil
+		}
+		if pkg.Essential {
+			a.status = ui.ErrorStyle.Render(fmt.Sprintf("Cannot purge '%s': package is essential.", pkg.Name))
 			return a, nil
 		}
 		names = append(names, pkg.Name)
@@ -282,7 +317,7 @@ func (a App) upgradeAllPackages() (tea.Model, tea.Cmd) {
 	a.pendingExecPkgs = names
 	a.pendingExecCount = 1
 	a.loading = true
-	a.status = fmt.Sprintf("Upgrading %d packages (sudo apt-get install --only-upgrade)...", len(names))
+	a.status = fmt.Sprintf("Upgrading %d packages (sudo apt-get dist-upgrade)...", len(names))
 	return a, upgradeAllPackagesCmd(names)
 }
 

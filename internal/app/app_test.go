@@ -1098,3 +1098,117 @@ func TestUpgradeAllSkipsHeldPackages(t *testing.T) {
 		t.Errorf("expected 'git' to upgrade, got '%s'", app.pendingExecPkgs[0])
 	}
 }
+
+func TestRemoveEssentialPackageBlocked(t *testing.T) {
+	a := newTestApp()
+	a.filtered = []model.Package{
+		{Name: "base-files", Installed: true, Essential: true},
+	}
+	a.essentialSet = map[string]bool{"base-files": true}
+	a.selectedIdx = 0
+
+	m, _ := a.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'r'}})
+	app := m.(App)
+
+	if app.loading {
+		t.Error("should not be loading when trying to remove essential package")
+	}
+	if !strings.Contains(app.status, "essential") {
+		t.Errorf("status should mention essential, got %q", app.status)
+	}
+}
+
+func TestPurgeEssentialPackageBlocked(t *testing.T) {
+	a := newTestApp()
+	a.filtered = []model.Package{
+		{Name: "base-files", Installed: true, Essential: true},
+	}
+	a.essentialSet = map[string]bool{"base-files": true}
+	a.selectedIdx = 0
+
+	m, _ := a.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'p'}})
+	app := m.(App)
+
+	if app.loading {
+		t.Error("should not be loading when trying to purge essential package")
+	}
+	if !strings.Contains(app.status, "essential") {
+		t.Errorf("status should mention essential, got %q", app.status)
+	}
+}
+
+func TestRemoveBatchSkipsEssential(t *testing.T) {
+	a := newTestApp()
+	a.filtered = []model.Package{
+		{Name: "base-files", Installed: true, Essential: true},
+		{Name: "vim", Installed: true},
+	}
+	a.essentialSet = map[string]bool{"base-files": true}
+	a.selected = map[string]bool{"base-files": true, "vim": true}
+
+	m, cmd := a.removeSelectedPackages()
+	app := m.(App)
+
+	if cmd == nil {
+		t.Error("expected command for non-essential package")
+	}
+	if len(app.pendingExecPkgs) != 1 {
+		t.Fatalf("expected 1 package, got %d", len(app.pendingExecPkgs))
+	}
+	if app.pendingExecPkgs[0] != "vim" {
+		t.Errorf("expected 'vim', got '%s'", app.pendingExecPkgs[0])
+	}
+}
+
+func TestRemoveAllEssentialBlocked(t *testing.T) {
+	a := newTestApp()
+	a.filtered = []model.Package{
+		{Name: "base-files", Installed: true, Essential: true},
+		{Name: "dpkg", Installed: true, Essential: true},
+	}
+	a.essentialSet = map[string]bool{"base-files": true, "dpkg": true}
+	a.selected = map[string]bool{"base-files": true, "dpkg": true}
+
+	m, cmd := a.removeSelectedPackages()
+	app := m.(App)
+
+	if cmd != nil {
+		t.Error("should not return command when all selected are essential")
+	}
+	if !strings.Contains(app.status, "essential") {
+		t.Errorf("status should mention essential, got %q", app.status)
+	}
+}
+
+func TestEssentialFlagSetFromBulkInfo(t *testing.T) {
+	a := newTestApp()
+
+	msg := allPackagesMsg{
+		bulkInfo: map[string]apt.PackageInfo{
+			"base-files": {Version: "12", Essential: true},
+			"vim":        {Version: "8.2"},
+		},
+		installed: []model.Package{{Name: "base-files", Installed: true}},
+	}
+
+	m, _ := a.Update(msg)
+	app := m.(App)
+
+	if !app.essentialSet["base-files"] {
+		t.Error("base-files should be in essentialSet")
+	}
+	if app.essentialSet["vim"] {
+		t.Error("vim should not be in essentialSet")
+	}
+
+	var baseFiles model.Package
+	for _, p := range app.allPackages {
+		if p.Name == "base-files" {
+			baseFiles = p
+			break
+		}
+	}
+	if !baseFiles.Essential {
+		t.Error("base-files package should have Essential=true")
+	}
+}

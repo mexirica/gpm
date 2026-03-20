@@ -13,4 +13,5 @@ type Package struct {
 	SecurityUpdate bool
 	Held           bool
 	Pinned         bool
+	Essential      bool
 }
