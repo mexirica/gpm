@@ -7,11 +7,22 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/mexirica/aptui/internal/portpkg"
 	"github.com/mexirica/aptui/internal/ui"
 )
 
 func (a App) exportInstalledPackages() (tea.Model, tea.Cmd) {
 	if a.loading {
+		return a, nil
+	}
+	if a.exportConfirm {
+		a.exportConfirm = false
+		a.status = "Exporting installed packages..."
+		return a, exportPackagesCmd(a.allPackages)
+	}
+	if portpkg.FileExists() {
+		a.exportConfirm = true
+		a.status = ui.WarningStyle.Render("File already exists. Press E to overwrite or Esc to cancel.")
 		return a, nil
 	}
 	a.status = "Exporting installed packages..."
@@ -64,6 +75,10 @@ func (a App) onImportFinished(msg importFinishedMsg) (tea.Model, tea.Cmd) {
 		a.errlogStore.Log("import", msg.err.Error())
 		a.status = ui.ErrorStyle.Render(fmt.Sprintf("Import failed: %v", msg.err))
 		return a, nil
+	}
+	if len(msg.names) == 0 {
+		a.status = ui.SuccessStyle.Render("\u2714 Import file contains no packages.")
+		return a, clearStatusAfter(5 * time.Second)
 	}
 	// Filter out packages that are already installed
 	var toInstall []string

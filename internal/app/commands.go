@@ -240,8 +240,7 @@ func exportPackagesCmd(packages []model.Package) tea.Cmd {
 		for _, p := range packages {
 			if p.Installed {
 				entries = append(entries, portpkg.PackageEntry{
-					Name:    p.Name,
-					Version: p.Version,
+					Name: p.Name,
 				})
 			}
 		}

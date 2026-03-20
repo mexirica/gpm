@@ -14,9 +14,9 @@ func TestExportAndImport(t *testing.T) {
 	defer func() { DefaultPath = orig }()
 
 	packages := []PackageEntry{
-		{Name: "zsh", Version: "5.9-1"},
-		{Name: "curl", Version: "7.88.1-10"},
-		{Name: "git", Version: "2.39.2-1"},
+		{Name: "zsh"},
+		{Name: "curl"},
+		{Name: "git"},
 	}
 
 	path, err := Export(packages)
@@ -43,9 +43,9 @@ func TestExportSortsPackages(t *testing.T) {
 	defer func() { DefaultPath = orig }()
 
 	packages := []PackageEntry{
-		{Name: "zsh", Version: "5.9"},
-		{Name: "apt", Version: "2.6"},
-		{Name: "curl", Version: "7.88"},
+		{Name: "zsh"},
+		{Name: "apt"},
+		{Name: "curl"},
 	}
 	path, err := Export(packages)
 	if err != nil {
@@ -97,8 +97,8 @@ func TestImportValidFile(t *testing.T) {
 	tmpDir := t.TempDir()
 	path := filepath.Join(tmpDir, "valid.json")
 	ef := ExportFile{Packages: []PackageEntry{
-		{Name: "vim", Version: "9.0"},
-		{Name: "tmux", Version: "3.3"},
+		{Name: "vim"},
+		{Name: "tmux"},
 	}}
 	data, _ := json.MarshalIndent(ef, "", "  ")
 	if err := os.WriteFile(path, data, 0o644); err != nil {

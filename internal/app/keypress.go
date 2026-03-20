@@ -71,6 +71,11 @@ func (a App) openSearch() (tea.Model, tea.Cmd) {
 }
 
 func (a App) clearFilterOrSearch() (tea.Model, tea.Cmd) {
+	if a.exportConfirm {
+		a.exportConfirm = false
+		a.status = fmt.Sprintf("%d packages ", len(a.filtered))
+		return a, nil
+	}
 	if a.filterQuery == "" {
 		return a, nil
 	}

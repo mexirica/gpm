@@ -121,6 +121,7 @@ type App struct {
 	importingPath      bool
 	importInput        textinput.Model
 	importConfirm      bool
+	exportConfirm      bool
 	importDetails      bool
 	importDetailOffset int
 	importToInstall    []string

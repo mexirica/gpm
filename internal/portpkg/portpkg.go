@@ -12,8 +12,7 @@ import (
 
 // PackageEntry represents one package in an export file.
 type PackageEntry struct {
-	Name    string `json:"name"`
-	Version string `json:"version,omitempty"`
+	Name string `json:"name"`
 }
 
 // ExportFile is the on-disk JSON format.
@@ -26,7 +25,13 @@ var DefaultPath = func() string {
 	return filepath.Join(datadir.RealUserHome(), "aptui-packages.json")
 }
 
-// Export writes the given package names and versions to the default JSON file.
+// FileExists reports whether the default export file already exists on disk.
+func FileExists() bool {
+	_, err := os.Stat(DefaultPath())
+	return err == nil
+}
+
+// Export writes the given package names to the default JSON file.
 func Export(packages []PackageEntry) (string, error) {
 	sorted := make([]PackageEntry, len(packages))
 	copy(sorted, packages)

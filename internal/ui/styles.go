@@ -96,4 +96,8 @@ var (
 	SuccessStyle = lipgloss.NewStyle().
 			Foreground(ColorSuccess).
 			Bold(true)
+
+	WarningStyle = lipgloss.NewStyle().
+			Foreground(ColorWarning).
+			Bold(true)
 )
