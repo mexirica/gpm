@@ -28,11 +28,13 @@ var DefaultPath = func() string {
 
 // Export writes the given package names and versions to the default JSON file.
 func Export(packages []PackageEntry) (string, error) {
-	sort.Slice(packages, func(i, j int) bool {
-		return packages[i].Name < packages[j].Name
+	sorted := make([]PackageEntry, len(packages))
+	copy(sorted, packages)
+	sort.Slice(sorted, func(i, j int) bool {
+		return sorted[i].Name < sorted[j].Name
 	})
 	path := DefaultPath()
-	ef := ExportFile{Packages: packages}
+	ef := ExportFile{Packages: sorted}
 	return path, datadir.SaveJSON(path, ef)
 }
 

@@ -6,6 +6,8 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 
+	lg2 "charm.land/lipgloss/v2"
+
 	"github.com/mexirica/aptui/internal/fetch"
 	"github.com/mexirica/aptui/internal/model"
 	"github.com/mexirica/aptui/internal/ui"
@@ -103,7 +105,104 @@ func (a App) View() string {
 		gap = 0
 	}
 
-	return listView + strings.Repeat("\n", gap) + footerView
+	page := listView + strings.Repeat("\n", gap) + footerView
+
+	if a.importConfirm {
+		bg := lg2.NewLayer(page)
+
+		yKey := lipgloss.NewStyle().Bold(true).Foreground(ui.ColorWhite).Background(ui.ColorSuccess).Padding(0, 1).Render("y")
+		nKey := lipgloss.NewStyle().Bold(true).Foreground(ui.ColorWhite).Background(ui.ColorDanger).Padding(0, 1).Render("n")
+		hintText := lipgloss.NewStyle().Foreground(ui.ColorSecondary)
+
+		var box string
+		if a.importDetails {
+			detailTitle := lipgloss.NewStyle().
+				Bold(true).
+				Foreground(ui.ColorWhite).
+				Background(ui.ColorPrimary).
+				Padding(0, 2).
+				Render(" Packages to Install ")
+
+			const perPage = 15
+			const maxBoxWidth = 50
+			total := len(a.importToInstall)
+			totalPages := (total + perPage - 1) / perPage
+			currentPage := a.importDetailOffset + 1
+
+			start := a.importDetailOffset * perPage
+			end := start + perPage
+			if end > total {
+				end = total
+			}
+			visible := a.importToInstall[start:end]
+
+			nameStyle := lipgloss.NewStyle().Foreground(ui.ColorWhite)
+			var lines []string
+			for _, name := range visible {
+				lines = append(lines, "  "+nameStyle.Render(name))
+			}
+
+			pageInfo := lipgloss.NewStyle().Foreground(ui.ColorSecondary).Render(
+				fmt.Sprintf("Page %d/%d (%d packages)", currentPage, totalPages, total),
+			)
+
+			dKey := lipgloss.NewStyle().Bold(true).Foreground(ui.ColorWhite).Background(ui.ColorPrimary).Padding(0, 1).Render("d")
+			lKey := lipgloss.NewStyle().Bold(true).Foreground(ui.ColorWhite).Background(ui.ColorPrimary).Padding(0, 1).Render("←")
+			rKey := lipgloss.NewStyle().Bold(true).Foreground(ui.ColorWhite).Background(ui.ColorPrimary).Padding(0, 1).Render("→")
+			hints := yKey + hintText.Render(" confirm  ") + nKey + hintText.Render(" cancel  ") + dKey + hintText.Render(" back  ") + lKey + rKey + hintText.Render(" page")
+
+			parts := []string{detailTitle, "", pageInfo, ""}
+			parts = append(parts, lines...)
+			parts = append(parts, "", hints)
+			detailContent := lipgloss.JoinVertical(lipgloss.Center, parts...)
+
+			box = lipgloss.NewStyle().
+				Border(lipgloss.RoundedBorder()).
+				BorderForeground(ui.ColorPrimary).
+				Padding(1, 3).
+				Align(lipgloss.Center).
+				Foreground(ui.ColorWhite).
+				Render(detailContent)
+		} else {
+			title := lipgloss.NewStyle().
+				Bold(true).
+				Foreground(ui.ColorWhite).
+				Background(ui.ColorPrimary).
+				Padding(0, 2).
+				Render(" Import Packages ")
+
+			countStyle := lipgloss.NewStyle().Bold(true).Foreground(ui.ColorInfo)
+			pathStyle := lipgloss.NewStyle().Foreground(ui.ColorSubtle)
+			body := fmt.Sprintf(
+				"%s packages to install from\n%s",
+				countStyle.Render(fmt.Sprintf("%d", len(a.importToInstall))),
+				pathStyle.Render(a.importFromPath),
+			)
+
+			dKey := lipgloss.NewStyle().Bold(true).Foreground(ui.ColorWhite).Background(ui.ColorPrimary).Padding(0, 1).Render("d")
+			hints := yKey + hintText.Render(" confirm  ") + nKey + hintText.Render(" cancel  ") + dKey + hintText.Render(" details")
+
+			content := lipgloss.JoinVertical(lipgloss.Center, title, "", body, "", hints)
+
+			box = lipgloss.NewStyle().
+				Border(lipgloss.RoundedBorder()).
+				BorderForeground(ui.ColorPrimary).
+				Padding(1, 3).
+				Align(lipgloss.Center).
+				Foreground(ui.ColorWhite).
+				Render(content)
+		}
+
+		boxW := lipgloss.Width(box)
+		boxH := lipgloss.Height(box)
+		fg := lg2.NewLayer(box).
+			X((w - boxW) / 2).
+			Y((a.height - boxH) / 2).
+			Z(1)
+		page = lg2.NewCompositor(bg, fg).Render()
+	}
+
+	return page
 }
 
 func (a App) renderTabBar() string {

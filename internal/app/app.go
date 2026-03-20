@@ -118,8 +118,13 @@ type App struct {
 	allNamesLoaded bool
 	installedCount int
 
-	importingPath bool
-	importInput   textinput.Model
+	importingPath      bool
+	importInput        textinput.Model
+	importConfirm      bool
+	importDetails      bool
+	importDetailOffset int
+	importToInstall    []string
+	importFromPath     string
 
 	errlogStore  *errlog.Store
 	errlogItems  []errlog.Entry

@@ -11,6 +11,9 @@ import (
 )
 
 func (a App) exportInstalledPackages() (tea.Model, tea.Cmd) {
+	if a.loading {
+		return a, nil
+	}
 	a.status = "Exporting installed packages..."
 	return a, exportPackagesCmd(a.allPackages)
 }
@@ -71,10 +74,54 @@ func (a App) onImportFinished(msg importFinishedMsg) (tea.Model, tea.Cmd) {
 		a.status = ui.SuccessStyle.Render("✔ All packages from the list are already installed.")
 		return a, clearStatusAfter(5 * time.Second)
 	}
-	a.pendingExecOp = "install"
-	a.pendingExecPkgs = toInstall
-	a.pendingExecCount = 1
-	a.loading = true
-	a.status = fmt.Sprintf("Installing %d packages from %s...", len(toInstall), msg.path)
-	return a, installBatchCmd(toInstall)
+	a.importConfirm = true
+	a.importToInstall = toInstall
+	a.importFromPath = msg.path
+	return a, nil
+}
+
+func (a App) onImportConfirmKeypress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if a.importDetails {
+		const perPage = 15
+		totalPages := (len(a.importToInstall) + perPage - 1) / perPage
+		switch msg.String() {
+		case "d":
+			a.importDetails = false
+			a.importDetailOffset = 0
+			return a, nil
+		case "right", "l":
+			if a.importDetailOffset < totalPages-1 {
+				a.importDetailOffset++
+			}
+			return a, nil
+		case "left", "h":
+			if a.importDetailOffset > 0 {
+				a.importDetailOffset--
+			}
+			return a, nil
+		}
+	}
+	switch msg.String() {
+	case "y":
+		a.importConfirm = false
+		a.importDetails = false
+		a.pendingExecOp = "install"
+		a.pendingExecPkgs = a.importToInstall
+		a.pendingExecCount = 1
+		a.loading = true
+		a.status = fmt.Sprintf("Installing %d packages from %s...", len(a.importToInstall), a.importFromPath)
+		return a, installBatchCmd(a.importToInstall)
+	case "n", "esc":
+		a.importConfirm = false
+		a.importDetails = false
+		a.importToInstall = nil
+		a.importFromPath = ""
+		a.status = fmt.Sprintf("%d packages ", len(a.filtered))
+		return a, nil
+	case "d":
+		a.importDetails = true
+		a.importDetailOffset = 0
+		return a, nil
+	}
+	return a, nil
 }

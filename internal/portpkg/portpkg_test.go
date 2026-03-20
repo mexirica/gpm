@@ -8,9 +8,10 @@ import (
 )
 
 func TestExportAndImport(t *testing.T) {
-	// Override default path to use a temp directory
 	tmpDir := t.TempDir()
-	path := filepath.Join(tmpDir, "test-packages.json")
+	orig := DefaultPath
+	DefaultPath = func() string { return filepath.Join(tmpDir, "test-packages.json") }
+	defer func() { DefaultPath = orig }()
 
 	packages := []PackageEntry{
 		{Name: "zsh", Version: "5.9-1"},
@@ -18,26 +19,20 @@ func TestExportAndImport(t *testing.T) {
 		{Name: "git", Version: "2.39.2-1"},
 	}
 
-	ef := ExportFile{Packages: packages}
-	data, err := json.MarshalIndent(ef, "", "  ")
+	path, err := Export(packages)
 	if err != nil {
-		t.Fatalf("marshal: %v", err)
-	}
-	if err := os.WriteFile(path, data, 0o644); err != nil {
-		t.Fatalf("write: %v", err)
+		t.Fatalf("export: %v", err)
 	}
 
-	// Read back
-	raw, err := os.ReadFile(path)
+	entries, gotPath, err := Import("")
 	if err != nil {
-		t.Fatalf("read: %v", err)
+		t.Fatalf("import: %v", err)
 	}
-	var got ExportFile
-	if err := json.Unmarshal(raw, &got); err != nil {
-		t.Fatalf("unmarshal: %v", err)
+	if gotPath != path {
+		t.Errorf("path = %q, want %q", gotPath, path)
 	}
-	if len(got.Packages) != 3 {
-		t.Fatalf("expected 3 packages, got %d", len(got.Packages))
+	if len(entries) != 3 {
+		t.Fatalf("expected 3 packages, got %d", len(entries))
 	}
 }
 

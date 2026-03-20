@@ -8,6 +8,9 @@ import (
 )
 
 func (a App) onKeypress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if a.importConfirm {
+		return a.onImportConfirmKeypress(msg)
+	}
 	if model, cmd, handled := a.dispatchErrorLog(msg); handled {
 		return model, cmd
 	}
