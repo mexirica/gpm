@@ -178,6 +178,8 @@ func (a App) redoTransaction() (tea.Model, tea.Cmd) {
 		cmd = removeBatchCmd(pkgs)
 	case history.OpUpgrade:
 		cmd = upgradeBatchCmd(pkgs)
+	case history.OpPurge:
+    	cmd = purgeBatchCmd(pkgs)
 	}
 	a.pendingExecOp = string(tx.Operation)
 	a.pendingExecPkgs = pkgs

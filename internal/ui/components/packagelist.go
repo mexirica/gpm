@@ -160,7 +160,7 @@ func RenderPackageList(packages []model.Package, selected int, offset int, maxVi
 			essentialSuffix = " 🛡"
 			maxLen -= 3 // reserve space for " 🛡" (1 space + 2-column emoji)
 		}
-		if len(name) > maxLen {
+		if len(name) > maxLen && maxLen > 0 {
 			name = name[:maxLen-1] + "…"
 		}
 		name += pinnedSuffix + essentialSuffix
