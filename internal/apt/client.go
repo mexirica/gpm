@@ -228,7 +228,7 @@ func InstallBatchCmd(names []string) *exec.Cmd {
 // UpgradeBatchCmd returns an upgrade command for multiple packages at once.
 func UpgradeBatchCmd(names []string) *exec.Cmd {
 	args := []string{
-		"apt-get", "install", "-y",
+		"apt-get", "install", "--only-upgrade", "-y",
 		"-o", "Acquire::Queue-Mode=access",
 		"-o", "Acquire::Retries=3",
 		"-o", "Acquire::http::Pipeline-Depth=5",

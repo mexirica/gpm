@@ -149,7 +149,7 @@ func (a App) redoTransaction() (tea.Model, tea.Cmd) {
 	}
 	tx := a.transactionItems[a.transactionIdx]
 	pkgs := tx.Packages
-	if tx.Operation == history.OpRemove || tx.Operation == "purge" {
+	if tx.Operation == history.OpRemove || tx.Operation == history.OpPurge {
 		var blocked []string
 		var allowed []string
 		for _, name := range pkgs {
