@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 
 	"github.com/mexirica/aptui/internal/datadir"
 )
@@ -48,6 +49,12 @@ func Export(packages []PackageEntry) (string, error) {
 func Import(path string) ([]PackageEntry, string, error) {
 	if path == "" {
 		path = DefaultPath()
+	}
+	if strings.HasPrefix(path, "~/") {
+		home, err := os.UserHomeDir()
+		if err == nil {
+			path = filepath.Join(home, path[2:])
+		}
 	}
 	data, err := os.ReadFile(path)
 	if err != nil {

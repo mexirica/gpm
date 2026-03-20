@@ -84,7 +84,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a.onMirrorApplyResult(msg)
 
 	case tea.MouseClickMsg, tea.MouseWheelMsg:
-		if !a.fetchView && !a.transactionView && !a.ppaView && !a.loading {
+		if !a.fetchView && !a.transactionView && !a.ppaView && !a.loading && !a.importConfirm {
 			return a.onMouseClick(msg.(tea.MouseMsg))
 		}
 

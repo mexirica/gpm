@@ -15,6 +15,7 @@ const (
 )
 
 func (a App) onMouseClick(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
+	a.exportConfirm = false
 	m := msg.Mouse()
 
 	switch msg.(type) {
