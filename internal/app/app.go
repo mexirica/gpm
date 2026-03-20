@@ -4,11 +4,11 @@ package app
 import (
 	"time"
 
-	"github.com/charmbracelet/bubbles/help"
-	"github.com/charmbracelet/bubbles/spinner"
-	"github.com/charmbracelet/bubbles/textinput"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/bubbles/v2/help"
+	"charm.land/bubbles/v2/spinner"
+	"charm.land/bubbles/v2/textinput"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 
 	"github.com/mexirica/aptui/internal/apt"
 	"github.com/mexirica/aptui/internal/errlog"
@@ -16,6 +16,8 @@ import (
 	"github.com/mexirica/aptui/internal/filter"
 	"github.com/mexirica/aptui/internal/history"
 	"github.com/mexirica/aptui/internal/model"
+	"github.com/mexirica/aptui/internal/pin"
+	"github.com/mexirica/aptui/internal/portpkg"
 	"github.com/mexirica/aptui/internal/ui"
 )
 
@@ -108,8 +110,22 @@ type App struct {
 	holdPending int
 	holdFailed  bool
 
+	essentialSet map[string]bool
+
+	pinStore  *pin.Store
+	pinnedSet map[string]bool
+
 	allNamesLoaded bool
 	installedCount int
+
+	importingPath      bool
+	importInput        textinput.Model
+	importConfirm      bool
+	exportConfirm      bool
+	importDetails      bool
+	importDetailOffset int
+	importToInstall    []string
+	importFromPath     string
 
 	errlogStore  *errlog.Store
 	errlogItems  []errlog.Entry
@@ -131,12 +147,17 @@ func New() App {
 	ti := textinput.New()
 	ti.Placeholder = "Search or filter: section: arch: size> installed ..."
 	ti.CharLimit = 200
-	ti.Width = 80
+	ti.SetWidth(80)
 
 	pi := textinput.New()
 	pi.Placeholder = "ppa:user/repository"
 	pi.CharLimit = 100
-	pi.Width = 50
+	pi.SetWidth(50)
+
+	ii := textinput.New()
+	ii.Placeholder = portpkg.DefaultPath()
+	ii.CharLimit = 300
+	ii.SetWidth(80)
 
 	s := spinner.New()
 	s.Spinner = spinner.Dot
@@ -150,6 +171,8 @@ func New() App {
 	h.Styles.ShortSeparator = lipgloss.NewStyle().Foreground(lipgloss.Color("#555555"))
 	h.Styles.FullSeparator = lipgloss.NewStyle().Foreground(lipgloss.Color("#555555"))
 
+	ps := pin.Load()
+
 	return App{
 		upgradableMap:    make(map[string]model.Package),
 		selected:         make(map[string]bool),
@@ -157,8 +180,12 @@ func New() App {
 		pkgIndex:         make(map[string]int),
 		autoremovableSet: make(map[string]bool),
 		heldSet:          make(map[string]bool),
+		essentialSet:     make(map[string]bool),
+		pinStore:         ps,
+		pinnedSet:        ps.Set(),
 		searchInput:      ti,
 		ppaInput:         pi,
+		importInput:      ii,
 		spinner:          s,
 		help:             h,
 		keys:             model.Keys,

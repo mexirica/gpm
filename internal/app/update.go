@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/charmbracelet/bubbles/spinner"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/spinner"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/mexirica/aptui/internal/apt"
 	"github.com/mexirica/aptui/internal/fetch"
@@ -20,7 +20,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		a.width = msg.Width
 		a.height = msg.Height
-		a.help.Width = msg.Width
+		a.help.SetWidth(msg.Width)
 		return a, nil
 
 	case spinner.TickMsg:
@@ -68,6 +68,12 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case ppaToggleMsg:
 		return a.onPPAToggled(msg)
 
+	case exportFinishedMsg:
+		return a.onExportFinished(msg)
+
+	case importFinishedMsg:
+		return a.onImportFinished(msg)
+
 	case fetchMirrorsMsg:
 		return a.onMirrorListLoaded(msg)
 
@@ -77,12 +83,12 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case fetchApplyMsg:
 		return a.onMirrorApplyResult(msg)
 
-	case tea.MouseMsg:
-		if !a.fetchView && !a.transactionView && !a.ppaView && !a.loading {
-			return a.onMouseClick(msg)
+	case tea.MouseClickMsg, tea.MouseWheelMsg:
+		if !a.fetchView && !a.transactionView && !a.ppaView && !a.loading && !a.importConfirm {
+			return a.onMouseClick(msg.(tea.MouseMsg))
 		}
 
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		if a.fetchView {
 			return a.onFetchKeypress(msg)
 		}
@@ -91,6 +97,9 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		if a.transactionView {
 			return a.onTransactionKeypress(msg)
+		}
+		if a.importingPath {
+			return a.onImportInputKeypress(msg)
 		}
 		if a.searching {
 			return a.onSearchKeypress(msg)
@@ -114,8 +123,12 @@ func (a App) onAllPackagesLoaded(msg allPackagesMsg) (tea.Model, tea.Cmd) {
 	}
 	// Populate infoCache from bulk-loaded data
 	a.infoCache = make(map[string]apt.PackageInfo, len(msg.bulkInfo))
+	a.essentialSet = make(map[string]bool)
 	for name, info := range msg.bulkInfo {
 		a.infoCache[name] = info
+		if info.Essential {
+			a.essentialSet[name] = true
+		}
 	}
 
 	seen := make(map[string]bool, len(msg.installed)+len(msg.bulkInfo))
@@ -129,6 +142,12 @@ func (a App) onAllPackagesLoaded(msg allPackagesMsg) (tea.Model, tea.Cmd) {
 		if a.heldSet[p.Name] {
 			p.Held = true
 		}
+		if a.pinnedSet[p.Name] {
+			p.Pinned = true
+		}
+		if a.essentialSet[p.Name] {
+			p.Essential = true
+		}
 		// Enrich installed packages with bulk info if fields are missing
 		if info, ok := msg.bulkInfo[p.Name]; ok {
 			if p.Size == "" || p.Size == "-" {
@@ -139,6 +158,9 @@ func (a App) onAllPackagesLoaded(msg allPackagesMsg) (tea.Model, tea.Cmd) {
 			}
 			if p.Architecture == "" {
 				p.Architecture = info.Architecture
+			}
+			if p.Description == "" {
+				p.Description = info.Description
 			}
 		}
 		all = append(all, p)
@@ -153,6 +175,9 @@ func (a App) onAllPackagesLoaded(msg allPackagesMsg) (tea.Model, tea.Cmd) {
 				Size:         info.Size,
 				Section:      info.Section,
 				Architecture: info.Architecture,
+				Pinned:       a.pinnedSet[name],
+				Essential:    info.Essential,
+				Description:  info.Description,
 			}
 			all = append(all, pkg)
 			seen[name] = true
@@ -195,7 +220,9 @@ func (a App) onSilentUpdateDone(msg silentUpdateDoneMsg) (tea.Model, tea.Cmd) {
 					pkg.Size = info.Size
 					pkg.Section = info.Section
 					pkg.Architecture = info.Architecture
+					pkg.Description = info.Description
 				}
+				pkg.Pinned = a.pinnedSet[name]
 				a.pkgIndex[name] = len(a.allPackages)
 				a.allPackages = append(a.allPackages, pkg)
 				changed = true
@@ -272,11 +299,17 @@ func (a App) onSearchResultLoaded(msg searchResultMsg) (tea.Model, tea.Cmd) {
 			msg.pkgs[i].Size = inst.Size
 			msg.pkgs[i].Section = inst.Section
 			msg.pkgs[i].Architecture = inst.Architecture
+			if msg.pkgs[i].Description == "" {
+				msg.pkgs[i].Description = inst.Description
+			}
 		} else if info, ok := a.infoCache[msg.pkgs[i].Name]; ok {
 			msg.pkgs[i].NewVersion = info.Version
 			msg.pkgs[i].Size = info.Size
 			msg.pkgs[i].Section = info.Section
 			msg.pkgs[i].Architecture = info.Architecture
+			if msg.pkgs[i].Description == "" {
+				msg.pkgs[i].Description = info.Description
+			}
 		}
 	}
 	a.filtered = msg.pkgs
@@ -314,6 +347,9 @@ func (a App) onPackageDetailLoaded(msg detailLoadedMsg) (tea.Model, tea.Cmd) {
 					if a.filtered[i].Architecture == "" {
 						a.filtered[i].Architecture = pi.Architecture
 					}
+					if a.filtered[i].Description == "" {
+						a.filtered[i].Description = pi.Description
+					}
 					break
 				}
 			}
@@ -329,6 +365,9 @@ func (a App) onPackageDetailLoaded(msg detailLoadedMsg) (tea.Model, tea.Cmd) {
 				}
 				if a.allPackages[idx].Architecture == "" {
 					a.allPackages[idx].Architecture = pi.Architecture
+				}
+				if a.allPackages[idx].Description == "" {
+					a.allPackages[idx].Description = pi.Description
 				}
 			}
 		}

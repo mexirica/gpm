@@ -7,8 +7,8 @@ import (
 	"sort"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 
 	"github.com/mexirica/aptui/internal/filter"
 	"github.com/mexirica/aptui/internal/fuzzy"
@@ -80,7 +80,8 @@ func (a *App) applyFilter() {
 			}
 		}
 	default:
-		source = a.allPackages
+		source = make([]model.Package, len(a.allPackages))
+		copy(source, a.allPackages)
 	}
 
 	af := filter.Parse(a.filterQuery)
@@ -184,6 +185,14 @@ func (a *App) applyFilter() {
 				return !less
 			}
 			return less
+		})
+	}
+
+	if len(a.pinnedSet) > 0 && sortCol == filter.SortNone && freeText == "" {
+		sort.SliceStable(a.filtered, func(i, j int) bool {
+			pi := a.pinnedSet[a.filtered[i].Name]
+			pj := a.pinnedSet[a.filtered[j].Name]
+			return pi && !pj
 		})
 	}
 

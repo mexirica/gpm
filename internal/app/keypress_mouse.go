@@ -3,8 +3,8 @@ package app
 import (
 	"fmt"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 
 	"github.com/mexirica/aptui/internal/filter"
 )
@@ -15,46 +15,53 @@ const (
 )
 
 func (a App) onMouseClick(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
-	if msg.Button == tea.MouseButtonWheelUp {
-		a.selectedIdx -= 3
-		if a.selectedIdx < 0 {
-			a.selectedIdx = 0
-		}
-		a.adjustPackageScroll()
-		if len(a.filtered) > 0 {
-			return a, showPackageDetailCmd(a.filtered[a.selectedIdx].Name)
-		}
-		return a, nil
-	}
-	if msg.Button == tea.MouseButtonWheelDown {
-		a.selectedIdx += 3
-		if a.selectedIdx >= len(a.filtered) {
-			a.selectedIdx = len(a.filtered) - 1
-		}
-		if a.selectedIdx < 0 {
-			a.selectedIdx = 0
-		}
-		a.adjustPackageScroll()
-		if len(a.filtered) > 0 {
-			return a, showPackageDetailCmd(a.filtered[a.selectedIdx].Name)
-		}
-		return a, nil
-	}
+	a.exportConfirm = false
+	m := msg.Mouse()
 
-	if msg.Action != tea.MouseActionPress || msg.Button != tea.MouseButtonLeft {
+	switch msg.(type) {
+	case tea.MouseWheelMsg:
+		if m.Button == tea.MouseWheelUp {
+			a.selectedIdx -= 3
+			if a.selectedIdx < 0 {
+				a.selectedIdx = 0
+			}
+			a.adjustPackageScroll()
+			if len(a.filtered) > 0 {
+				return a, showPackageDetailCmd(a.filtered[a.selectedIdx].Name)
+			}
+			return a, nil
+		}
+		if m.Button == tea.MouseWheelDown {
+			a.selectedIdx += 3
+			if a.selectedIdx >= len(a.filtered) {
+				a.selectedIdx = len(a.filtered) - 1
+			}
+			if a.selectedIdx < 0 {
+				a.selectedIdx = 0
+			}
+			a.adjustPackageScroll()
+			if len(a.filtered) > 0 {
+				return a, showPackageDetailCmd(a.filtered[a.selectedIdx].Name)
+			}
+			return a, nil
+		}
 		return a, nil
-	}
 
-	y := msg.Y
+	case tea.MouseClickMsg:
+		if m.Button != tea.MouseLeft {
+			return a, nil
+		}
+
+		y := m.Y
 
 	// Click on tab bar (row 0) → switch tab
 	if y == 0 {
-		return a.onTabClick(msg.X)
+		return a.onTabClick(m.X)
 	}
 
 	// Click on column header/separator area → toggle sort
 	if y >= packageListHeaderY && y < packageListStartY {
-		return a.onHeaderClick(msg.X)
+		return a.onHeaderClick(m.X)
 	}
 
 	if y == a.searchBarY() && !a.searching {
@@ -90,6 +97,9 @@ func (a App) onMouseClick(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	a.selectedIdx = idx
 	a.adjustPackageScroll()
 	return a, showPackageDetailCmd(a.filtered[a.selectedIdx].Name)
+	}
+
+	return a, nil
 }
 
 func (a App) onTabClick(x int) (tea.Model, tea.Cmd) {

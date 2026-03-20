@@ -3,12 +3,12 @@ package app
 import (
 	"fmt"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/mexirica/aptui/internal/filter"
 )
 
-func (a App) onSearchKeypress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (a App) onSearchKeypress(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "enter":
 		return a.submitSearch()
@@ -56,7 +56,7 @@ func (a App) cancelSearch() (tea.Model, tea.Cmd) {
 	return a, nil
 }
 
-func (a App) updateSearchFilter(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (a App) updateSearchFilter(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	a.searchInput, cmd = a.searchInput.Update(msg)
 	a.filterQuery = a.searchInput.Value()

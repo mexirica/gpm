@@ -2,14 +2,15 @@ package app
 
 import (
 	"fmt"
+	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/mexirica/aptui/internal/history"
 	"github.com/mexirica/aptui/internal/ui"
 )
 
-func (a App) onTransactionKeypress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (a App) onTransactionKeypress(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "esc", "t":
 		return a.closeTransactionView()
@@ -106,15 +107,35 @@ func (a App) undoTransaction() (tea.Model, tea.Cmd) {
 		return a, nil
 	}
 	undoOp := history.UndoOperation(tx.Operation)
+	pkgs := tx.Packages
+	if undoOp == history.OpRemove {
+		var blocked []string
+		var allowed []string
+		for _, name := range pkgs {
+			if a.essentialSet[name] {
+				blocked = append(blocked, name)
+			} else {
+				allowed = append(allowed, name)
+			}
+		}
+		if len(blocked) > 0 && len(allowed) == 0 {
+			a.status = ui.ErrorStyle.Render(fmt.Sprintf("Cannot undo: essential package(s): %s", strings.Join(blocked, ", ")))
+			return a, nil
+		}
+		if len(blocked) > 0 {
+			a.status = ui.ErrorStyle.Render(fmt.Sprintf("Skipping essential: %s", strings.Join(blocked, ", ")))
+		}
+		pkgs = allowed
+	}
 	var cmd tea.Cmd
 	switch undoOp {
 	case history.OpRemove:
-		cmd = removeBatchCmd(tx.Packages)
+		cmd = removeBatchCmd(pkgs)
 	case history.OpInstall:
-		cmd = installBatchCmd(tx.Packages)
+		cmd = installBatchCmd(pkgs)
 	}
 	a.pendingExecOp = string(undoOp)
-	a.pendingExecPkgs = tx.Packages
+	a.pendingExecPkgs = pkgs
 	a.pendingExecCount = 1
 	a.transactionView = false
 	a.loading = true
@@ -127,19 +148,41 @@ func (a App) redoTransaction() (tea.Model, tea.Cmd) {
 		return a, nil
 	}
 	tx := a.transactionItems[a.transactionIdx]
+	pkgs := tx.Packages
+	if tx.Operation == history.OpRemove || tx.Operation == history.OpPurge {
+		var blocked []string
+		var allowed []string
+		for _, name := range pkgs {
+			if a.essentialSet[name] {
+				blocked = append(blocked, name)
+			} else {
+				allowed = append(allowed, name)
+			}
+		}
+		if len(blocked) > 0 && len(allowed) == 0 {
+			a.status = ui.ErrorStyle.Render(fmt.Sprintf("Cannot redo: essential package(s): %s", strings.Join(blocked, ", ")))
+			return a, nil
+		}
+		if len(blocked) > 0 {
+			a.status = ui.ErrorStyle.Render(fmt.Sprintf("Skipping essential: %s", strings.Join(blocked, ", ")))
+		}
+		pkgs = allowed
+	}
 	var cmd tea.Cmd
 	switch tx.Operation {
 	case history.OpUpgradeAll:
-		cmd = upgradeAllPackagesCmd(tx.Packages)
+		cmd = upgradeAllPackagesCmd(pkgs)
 	case history.OpInstall:
-		cmd = installBatchCmd(tx.Packages)
+		cmd = installBatchCmd(pkgs)
 	case history.OpRemove:
-		cmd = removeBatchCmd(tx.Packages)
+		cmd = removeBatchCmd(pkgs)
 	case history.OpUpgrade:
-		cmd = upgradeBatchCmd(tx.Packages)
+		cmd = upgradeBatchCmd(pkgs)
+	case history.OpPurge:
+    	cmd = purgeBatchCmd(pkgs)
 	}
 	a.pendingExecOp = string(tx.Operation)
-	a.pendingExecPkgs = tx.Packages
+	a.pendingExecPkgs = pkgs
 	a.pendingExecCount = 1
 	a.transactionView = false
 	a.loading = true

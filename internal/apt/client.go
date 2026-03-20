@@ -46,6 +46,9 @@ func parsePackageFile(path string, info map[string]PackageInfo) {
 
 	var curPkg, curVer, curSize, curSection, curArch string
 
+	var curDesc string
+	var curEssential bool
+
 	flush := func() {
 		if curPkg != "" {
 			info[curPkg] = PackageInfo{
@@ -53,9 +56,12 @@ func parsePackageFile(path string, info map[string]PackageInfo) {
 				Size:         formatSize(curSize),
 				Section:      curSection,
 				Architecture: curArch,
+				Description:  curDesc,
+				Essential:    curEssential,
 			}
 		}
-		curPkg, curVer, curSize, curSection, curArch = "", "", "", "", ""
+		curPkg, curVer, curSize, curSection, curArch, curDesc = "", "", "", "", "", ""
+		curEssential = false
 	}
 
 	for scanner.Scan() {
@@ -84,6 +90,18 @@ func parsePackageFile(path string, info map[string]PackageInfo) {
 		case 'A':
 			if strings.HasPrefix(line, "Architecture: ") {
 				curArch = line[14:]
+			}
+		case 'D':
+			if strings.HasPrefix(line, "Description") && !strings.HasPrefix(line, "Description-md5") {
+				if curDesc == "" {
+					if idx := strings.Index(line, ": "); idx != -1 {
+						curDesc = line[idx+2:]
+					}
+				}
+			}
+		case 'E':
+			if strings.HasPrefix(line, "Essential: yes") {
+				curEssential = true
 			}
 		}
 	}
@@ -140,7 +158,7 @@ func ListAutoremovable() ([]string, error) {
 
 func ListInstalled() ([]model.Package, error) {
 	cmd := exec.Command("dpkg-query", "-W",
-		"-f=${Package}\t${Version}\t${Installed-Size}\t${Description}\t${Section}\t${Architecture}\n")
+		"-f=${Package}\t${Version}\t${Installed-Size}\t${binary:Summary}\t${Section}\t${Architecture}\n")
 	var out bytes.Buffer
 	var stderr bytes.Buffer
 	cmd.Stdout = &out
@@ -218,6 +236,14 @@ func UpgradeBatchCmd(names []string) *exec.Cmd {
 	}
 	args = append(args, names...)
 	c := exec.Command("sudo", args...)
+	c.Stdin = os.Stdin
+	c.Stdout = os.Stdout
+	c.Stderr = os.Stderr
+	return c
+}
+
+func DistUpgradeCmd() *exec.Cmd {
+	c := exec.Command("sudo", "apt-get", "dist-upgrade", "-y")
 	c.Stdin = os.Stdin
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
@@ -555,11 +581,14 @@ type PackageInfo struct {
 	Size         string
 	Section      string
 	Architecture string
+	Description  string
+	Essential    bool
 }
 
 // ParseShowEntry parses a single apt-cache show output and returns PackageInfo.
 func ParseShowEntry(info string) PackageInfo {
-	var ver, size, section, arch string
+	var ver, size, section, arch, desc string
+	var essential bool
 	for _, line := range strings.Split(info, "\n") {
 		if line == "" && ver != "" {
 			break // only first entry
@@ -572,6 +601,14 @@ func ParseShowEntry(info string) PackageInfo {
 			section = strings.TrimPrefix(line, "Section: ")
 		} else if strings.HasPrefix(line, "Architecture: ") {
 			arch = strings.TrimPrefix(line, "Architecture: ")
+		} else if strings.HasPrefix(line, "Essential: yes") {
+			essential = true
+		} else if strings.HasPrefix(line, "Description") && !strings.HasPrefix(line, "Description-md5") {
+			if desc == "" {
+				if idx := strings.Index(line, ": "); idx != -1 {
+					desc = line[idx+2:]
+				}
+			}
 		}
 	}
 	return PackageInfo{
@@ -579,6 +616,8 @@ func ParseShowEntry(info string) PackageInfo {
 		Size:         formatSize(size),
 		Section:      section,
 		Architecture: arch,
+		Description:  desc,
+		Essential:    essential,
 	}
 }
 

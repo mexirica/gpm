@@ -4,11 +4,12 @@ import (
 	"strings"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/mexirica/aptui/internal/apt"
 	"github.com/mexirica/aptui/internal/fetch"
 	"github.com/mexirica/aptui/internal/model"
+	"github.com/mexirica/aptui/internal/portpkg"
 )
 
 func purgeBatchCmd(names []string) tea.Cmd {
@@ -114,7 +115,7 @@ func loadTransactionDepsCmd(txIdx int, packages []string) tea.Cmd {
 }
 
 func upgradeAllPackagesCmd(names []string) tea.Cmd {
-	cmd := apt.UpgradeBatchCmd(names)
+	cmd := apt.DistUpgradeCmd()
 	return tea.ExecProcess(cmd, func(err error) tea.Msg {
 		return execFinishedMsg{op: "upgrade-all", name: strings.Join(names, " "), err: err}
 	})
@@ -230,5 +231,34 @@ func unholdBatchCmd(names []string) tea.Cmd {
 	return func() tea.Msg {
 		err := apt.Unhold(names)
 		return holdFinishedMsg{op: "unhold", err: err}
+	}
+}
+
+func exportPackagesCmd(packages []model.Package) tea.Cmd {
+	return func() tea.Msg {
+		var entries []portpkg.PackageEntry
+		for _, p := range packages {
+			if p.Installed {
+				entries = append(entries, portpkg.PackageEntry{
+					Name: p.Name,
+				})
+			}
+		}
+		path, err := portpkg.Export(entries)
+		return exportFinishedMsg{path: path, err: err}
+	}
+}
+
+func importPackagesCmd(path string) tea.Cmd {
+	return func() tea.Msg {
+		entries, resolvedPath, err := portpkg.Import(path)
+		if err != nil {
+			return importFinishedMsg{path: resolvedPath, err: err}
+		}
+		var names []string
+		for _, e := range entries {
+			names = append(names, e.Name)
+		}
+		return importFinishedMsg{names: names, path: resolvedPath}
 	}
 }

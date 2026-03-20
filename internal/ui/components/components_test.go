@@ -253,3 +253,15 @@ func TestRenderPackageListHeldBadge(t *testing.T) {
 		t.Error("held package should show lock badge")
 	}
 }
+
+func TestRenderPackageListEssentialBadge(t *testing.T) {
+	pkgs := []model.Package{
+		{Name: "base-files", Version: "12", Installed: true, Essential: true},
+		{Name: "vim", Version: "8.2", Installed: true},
+	}
+
+	result := RenderPackageList(pkgs, 0, 0, 10, 120, nil)
+	if !strings.Contains(result, "🛡") {
+		t.Error("essential package should show shield badge")
+	}
+}

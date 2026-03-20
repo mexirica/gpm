@@ -1,0 +1,68 @@
+// Package portpkg implements export and import of installed package lists.
+package portpkg
+
+import (
+	"encoding/json"
+	"os"
+	"path/filepath"
+	"sort"
+	"strings"
+
+	"github.com/mexirica/aptui/internal/datadir"
+)
+
+// PackageEntry represents one package in an export file.
+type PackageEntry struct {
+	Name string `json:"name"`
+}
+
+// ExportFile is the on-disk JSON format.
+type ExportFile struct {
+	Packages []PackageEntry `json:"packages"`
+}
+
+// DefaultPath returns the default export file location.
+var DefaultPath = func() string {
+	return filepath.Join(datadir.RealUserHome(), "aptui-packages.json")
+}
+
+// FileExists reports whether the default export file already exists on disk.
+func FileExists() bool {
+	_, err := os.Stat(DefaultPath())
+	return err == nil
+}
+
+// Export writes the given package names to the default JSON file.
+func Export(packages []PackageEntry) (string, error) {
+	sorted := make([]PackageEntry, len(packages))
+	copy(sorted, packages)
+	sort.Slice(sorted, func(i, j int) bool {
+		return sorted[i].Name < sorted[j].Name
+	})
+	path := DefaultPath()
+	ef := ExportFile{Packages: sorted}
+	return path, datadir.SaveJSON(path, ef)
+}
+
+// Import reads the package list from the given path.
+// If path is empty, the default path is used.
+func Import(path string) ([]PackageEntry, string, error) {
+	if path == "" {
+		path = DefaultPath()
+	}
+	if strings.HasPrefix(path, "~/") {
+		home, err := os.UserHomeDir()
+		if err == nil {
+			path = filepath.Join(home, path[2:])
+		}
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, path, err
+	}
+	var ef ExportFile
+	if err := json.Unmarshal(data, &ef); err != nil {
+		return nil, path, err
+	}
+	return ef.Packages, path, nil
+}

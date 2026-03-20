@@ -2,11 +2,14 @@ package app
 
 import (
 	"fmt"
+	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
+
+	"github.com/mexirica/aptui/internal/ui"
 )
 
-func (a App) dispatchNavigation(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
+func (a App) dispatchNavigation(msg tea.KeyPressMsg) (tea.Model, tea.Cmd, bool) {
 	switch msg.String() {
 	case "j", "down":
 		model, cmd := a.selectNextPackage()
@@ -71,9 +74,9 @@ func (a App) scrollPackagesUp() (tea.Model, tea.Cmd) {
 	return a, tea.Batch(cmds...)
 }
 
-func (a App) dispatchSelection(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
+func (a App) dispatchSelection(msg tea.KeyPressMsg) (tea.Model, tea.Cmd, bool) {
 	switch msg.String() {
-	case " ":
+	case "space":
 		model, cmd := a.togglePackageSelection()
 		return model, cmd, true
 	case "a":
@@ -122,7 +125,7 @@ func (a App) toggleSelectAll() (tea.Model, tea.Cmd) {
 	return a, nil
 }
 
-func (a App) dispatchPackageAction(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
+func (a App) dispatchPackageAction(msg tea.KeyPressMsg) (tea.Model, tea.Cmd, bool) {
 	switch msg.String() {
 	case "i":
 		model, cmd := a.installSelectedPackages()
@@ -141,6 +144,9 @@ func (a App) dispatchPackageAction(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
 		return model, cmd, true
 	case "H":
 		model, cmd := a.holdSelectedPackages()
+		return model, cmd, true
+	case "F":
+		model, cmd := a.togglePinPackages()
 		return model, cmd, true
 	case "c":
 		model, cmd := a.cleanupAllPackages()
@@ -178,13 +184,29 @@ func (a App) installSelectedPackages() (tea.Model, tea.Cmd) {
 func (a App) removeSelectedPackages() (tea.Model, tea.Cmd) {
 	var names []string
 	if len(a.selected) > 0 {
+		var blocked []string
 		for name := range a.selected {
+			if a.essentialSet[name] {
+				blocked = append(blocked, name)
+				continue
+			}
 			names = append(names, name)
+		}
+		if len(blocked) > 0 && len(names) == 0 {
+			a.status = ui.ErrorStyle.Render(fmt.Sprintf("Cannot remove essential package(s): %s", strings.Join(blocked, ", ")))
+			return a, nil
+		}
+		if len(blocked) > 0 {
+			a.status = ui.ErrorStyle.Render(fmt.Sprintf("Skipping essential: %s", strings.Join(blocked, ", ")))
 		}
 	} else if len(a.filtered) > 0 && a.selectedIdx < len(a.filtered) {
 		pkg := a.filtered[a.selectedIdx]
 		if !pkg.Installed {
 			a.status = fmt.Sprintf("'%s' is not installed.", pkg.Name)
+			return a, nil
+		}
+		if pkg.Essential {
+			a.status = ui.ErrorStyle.Render(fmt.Sprintf("Cannot remove '%s': package is essential.", pkg.Name))
 			return a, nil
 		}
 		names = append(names, pkg.Name)
@@ -204,13 +226,29 @@ func (a App) removeSelectedPackages() (tea.Model, tea.Cmd) {
 func (a App) purgeSelectedPackages() (tea.Model, tea.Cmd) {
 	var names []string
 	if len(a.selected) > 0 {
+		var blocked []string
 		for name := range a.selected {
+			if a.essentialSet[name] {
+				blocked = append(blocked, name)
+				continue
+			}
 			names = append(names, name)
+		}
+		if len(blocked) > 0 && len(names) == 0 {
+			a.status = ui.ErrorStyle.Render(fmt.Sprintf("Cannot purge essential package(s): %s", strings.Join(blocked, ", ")))
+			return a, nil
+		}
+		if len(blocked) > 0 {
+			a.status = ui.ErrorStyle.Render(fmt.Sprintf("Skipping essential: %s", strings.Join(blocked, ", ")))
 		}
 	} else if len(a.filtered) > 0 && a.selectedIdx < len(a.filtered) {
 		pkg := a.filtered[a.selectedIdx]
 		if !pkg.Installed {
 			a.status = fmt.Sprintf("'%s' is not installed.", pkg.Name)
+			return a, nil
+		}
+		if pkg.Essential {
+			a.status = ui.ErrorStyle.Render(fmt.Sprintf("Cannot purge '%s': package is essential.", pkg.Name))
 			return a, nil
 		}
 		names = append(names, pkg.Name)
@@ -279,7 +317,7 @@ func (a App) upgradeAllPackages() (tea.Model, tea.Cmd) {
 	a.pendingExecPkgs = names
 	a.pendingExecCount = 1
 	a.loading = true
-	a.status = fmt.Sprintf("Upgrading %d packages (sudo apt-get install --only-upgrade)...", len(names))
+	a.status = fmt.Sprintf("Upgrading %d packages (sudo apt-get dist-upgrade)...", len(names))
 	return a, upgradeAllPackagesCmd(names)
 }
 
@@ -337,7 +375,7 @@ func (a App) holdSelectedPackages() (tea.Model, tea.Cmd) {
 	return a, unholdBatchCmd(unholdNames)
 }
 
-func (a App) switchTab(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
+func (a App) switchTab(msg tea.KeyPressMsg) (tea.Model, tea.Cmd, bool) {
 	switch msg.String() {
 	case "tab":
 		a.activeTab = (a.activeTab + 1) % tabKind(len(tabDefs))
@@ -349,4 +387,67 @@ func (a App) switchTab(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
 
 	cmd := a.activateTab()
 	return a, cmd, true
+}
+
+func (a App) togglePinPackages() (tea.Model, tea.Cmd) {
+	var names []string
+	var currentName string
+	// Capture highlighted package before reorder
+	if len(a.filtered) > 0 && a.selectedIdx < len(a.filtered) {
+		currentName = a.filtered[a.selectedIdx].Name
+	}
+	if len(a.selected) > 0 {
+		for name := range a.selected {
+			names = append(names, name)
+		}
+	} else if currentName != "" {
+		names = append(names, currentName)
+	}
+	if len(names) == 0 {
+		return a, nil
+	}
+
+	var pinned, unpinned int
+	for _, name := range names {
+		if a.pinStore.Toggle(name) {
+			a.pinnedSet[name] = true
+			pinned++
+		} else {
+			delete(a.pinnedSet, name)
+			unpinned++
+		}
+	}
+
+	// Update Pinned flag on allPackages
+	for _, name := range names {
+		if idx, ok := a.pkgIndex[name]; ok {
+			a.allPackages[idx].Pinned = a.pinnedSet[name]
+		}
+	}
+
+	a.applyFilter()
+	a.selected = make(map[string]bool)
+
+	// Restore cursor to the same package after reorder
+	for i, p := range a.filtered {
+		if p.Name == currentName {
+			a.selectedIdx = i
+			a.adjustPackageScroll()
+			break
+		}
+	}
+
+	if pinned > 0 && unpinned > 0 {
+		a.status = fmt.Sprintf("Pinned %d, unpinned %d packages", pinned, unpinned)
+	} else if pinned > 0 {
+		a.status = fmt.Sprintf("Pinned %d package(s)", pinned)
+	} else {
+		a.status = fmt.Sprintf("Unpinned %d package(s)", unpinned)
+	}
+
+	var cmd tea.Cmd
+	if len(a.filtered) > 0 {
+		cmd = showPackageDetailCmd(a.filtered[a.selectedIdx].Name)
+	}
+	return a, cmd
 }

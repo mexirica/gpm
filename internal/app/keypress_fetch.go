@@ -3,13 +3,13 @@ package app
 import (
 	"fmt"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/mexirica/aptui/internal/fetch"
 	"github.com/mexirica/aptui/internal/ui"
 )
 
-func (a App) onFetchKeypress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (a App) onFetchKeypress(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	if a.fetchTesting {
 		return a.cancelFetchTest(msg)
 	}
@@ -27,7 +27,7 @@ func (a App) onFetchKeypress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return a.scrollMirrorsDown()
 	case "ctrl+u", "pgup":
 		return a.scrollMirrorsUp()
-	case " ":
+	case "space":
 		return a.toggleMirrorSelection()
 	case "enter":
 		return a.applySelectedMirrors()
@@ -35,7 +35,7 @@ func (a App) onFetchKeypress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return a, nil
 }
 
-func (a App) cancelFetchTest(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (a App) cancelFetchTest(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	if msg.String() == "esc" || msg.String() == "q" || msg.String() == "ctrl+c" {
 		a.fetchView = false
 		a.fetchTesting = false

@@ -1,6 +1,7 @@
 package apt
 
 import (
+	"os"
 	"testing"
 
 	"github.com/mexirica/aptui/internal/model"
@@ -208,6 +209,9 @@ Installed-Size: 800
 	if pi.Size == "" || pi.Size == "-" {
 		t.Errorf("expected formatted size, got '%s'", pi.Size)
 	}
+	if pi.Description != "Vi IMproved - enhanced vi editor" {
+		t.Errorf("expected description, got '%s'", pi.Description)
+	}
 }
 
 func TestParseShowEntryEmpty(t *testing.T) {
@@ -291,5 +295,83 @@ vim - Vi IMproved - enhanced vi editor`
 	}
 	if pkgs[1].Name != "vim" {
 		t.Errorf("expected 'vim', got '%s'", pkgs[1].Name)
+	}
+}
+
+func TestParsePackageFileDescription(t *testing.T) {
+	content := "Package: testpkg\nVersion: 1.0\nInstalled-Size: 100\nSection: utils\nArchitecture: amd64\nDescription: A test package\nDescription-md5: abc123\n\nPackage: localized\nVersion: 2.0\nDescription-pt_BR: Descricao em portugues\nDescription: English description\n"
+	dir := t.TempDir()
+	path := dir + "/test_Packages"
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	info := make(map[string]PackageInfo)
+	parsePackageFile(path, info)
+
+	pi, ok := info["testpkg"]
+	if !ok {
+		t.Fatal("expected testpkg in info")
+	}
+	if pi.Description != "A test package" {
+		t.Errorf("expected 'A test package', got '%s'", pi.Description)
+	}
+
+	pi2, ok := info["localized"]
+	if !ok {
+		t.Fatal("expected localized in info")
+	}
+	if pi2.Description != "Descricao em portugues" {
+		t.Errorf("expected first description preserved, got '%s'", pi2.Description)
+	}
+}
+
+func TestParseShowEntryIgnoresDescriptionMd5(t *testing.T) {
+	info := "Package: vim\nVersion: 1.0\nDescription: Real description\nDescription-md5: abc123\n"
+	pi := ParseShowEntry(info)
+	if pi.Description != "Real description" {
+		t.Errorf("expected 'Real description', got '%s'", pi.Description)
+	}
+}
+
+func TestParseShowEntryEssential(t *testing.T) {
+	info := "Package: base-files\nVersion: 12\nEssential: yes\nDescription: Debian base system miscellaneous files\n"
+	pi := ParseShowEntry(info)
+	if !pi.Essential {
+		t.Error("expected Essential=true for package with 'Essential: yes'")
+	}
+}
+
+func TestParseShowEntryNotEssential(t *testing.T) {
+	info := "Package: vim\nVersion: 8.2\nDescription: Vi IMproved\n"
+	pi := ParseShowEntry(info)
+	if pi.Essential {
+		t.Error("expected Essential=false for package without 'Essential: yes'")
+	}
+}
+
+func TestParsePackageFileEssential(t *testing.T) {
+	content := "Package: base-files\nVersion: 12\nEssential: yes\nInstalled-Size: 400\nSection: admin\nArchitecture: amd64\nDescription: Debian base system files\n\nPackage: vim\nVersion: 8.2\nInstalled-Size: 3000\nSection: editors\nArchitecture: amd64\nDescription: Vi IMproved\n"
+	dir := t.TempDir()
+	path := dir + "/test_Packages"
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	info := make(map[string]PackageInfo)
+	parsePackageFile(path, info)
+
+	pi, ok := info["base-files"]
+	if !ok {
+		t.Fatal("expected base-files in info")
+	}
+	if !pi.Essential {
+		t.Error("expected base-files to be Essential")
+	}
+
+	pi2, ok := info["vim"]
+	if !ok {
+		t.Fatal("expected vim in info")
+	}
+	if pi2.Essential {
+		t.Error("expected vim to not be Essential")
 	}
 }
